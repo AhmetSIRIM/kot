@@ -1,0 +1,16 @@
+[versions]
+kotlin = "2.4.0"
+asm = "9.10.1"
+kotest = "6.2.1"
+junit = "6.1.1"
+pluginPublish = "2.1.1"
+
+[libraries]
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish" }
