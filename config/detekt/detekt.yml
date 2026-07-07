@@ -1,0 +1,5 @@
+# Overrides on top of detekt's default config (buildUponDefaultConfig = true in build.gradle.kts).
+style:
+  MaxLineLength:
+    # The default 120 fights this codebase's deliberate end-of-line teaching comments.
+    maxLineLength: 140

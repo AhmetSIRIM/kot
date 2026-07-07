@@ -7,6 +7,9 @@ import org.objectweb.asm.Opcodes
 // JVM type descriptor of kotlin.Metadata: "L" + slash-separated FQN + ";".
 private const val KOTLIN_METADATA_DESCRIPTOR = "Lkotlin/Metadata;"
 
+// The class-file version int packs the minor version into the upper 16 bits; this keeps the lower 16.
+private const val MAJOR_VERSION_MASK = 0xFFFF
+
 /**
  * Collects the two facts a single class contributes: its class-file major version and,
  * when the class is Kotlin, the @kotlin.Metadata mv stamp.
@@ -30,9 +33,7 @@ internal class ScanningClassVisitor : ClassVisitor(Opcodes.ASM9) {
         superName: String?,
         interfaces: Array<out String>?,
     ) {
-        // The class-file version packs the minor version into the upper 16 bits;
-        // masking with 0xFFFF keeps the lower 16, the major version.
-        majorVersion = version and 0xFFFF
+        majorVersion = version and MAJOR_VERSION_MASK
     }
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
