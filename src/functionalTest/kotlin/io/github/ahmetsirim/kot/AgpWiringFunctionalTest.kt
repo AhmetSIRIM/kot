@@ -8,8 +8,6 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import java.io.InputStream
-import java.util.Properties
 
 /**
  * End-to-end proof of the AGP wiring layer: a real Android library project is built by a real
@@ -88,7 +86,7 @@ class AgpWiringFunctionalTest {
                 }
                 dependencies {
                     classpath("com.android.tools.build:gradle:$AGP_VERSION")
-                    classpath(files(${pluginUnderTestClasspathAsKotlinArguments()}))
+                    classpath(files(${PluginUnderTestClasspath.asKotlinArguments()}))
                 }
             }
 
@@ -126,23 +124,6 @@ class AgpWiringFunctionalTest {
             source.parentFile.mkdirs()
             source.writeText("package fixture.library\n\nclass Sample\n")
         }
-    }
-
-    /**
-     * Reads the plugin's own classpath from the metadata file that the pluginUnderTestMetadata
-     * task writes onto the functionalTest runtime classpath (this is the same file
-     * withPluginClasspath reads), and renders it as quoted, comma-separated arguments for the
-     * generated build script's files(...) call.
-     */
-    private fun pluginUnderTestClasspathAsKotlinArguments(): String {
-        val metadata = Properties()
-        checkNotNull(javaClass.classLoader.getResourceAsStream("plugin-under-test-metadata.properties")) {
-            "plugin-under-test-metadata.properties not found on the test classpath"
-        }.use { stream: InputStream -> metadata.load(stream) }
-
-        return metadata.getProperty("implementation-classpath")
-            .split(File.pathSeparator)
-            .joinToString(separator = ", ") { path: String -> "\"${path.replace("\\", "\\\\")}\"" }
     }
 
     private companion object {
