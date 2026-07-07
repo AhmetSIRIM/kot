@@ -1,5 +1,7 @@
 # kot
 
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.ahmetsirim.kot)](https://plugins.gradle.org/plugin/io.github.ahmetsirim.kot)
+
 Producer-side verification of the consumer floors your Android library actually ships.
 
 > **Tip:** *kot* is the Turkish construction term for a surveyed elevation level; *kot farkı* is
