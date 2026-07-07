@@ -2,6 +2,7 @@ package io.github.ahmetsirim.kot
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.TaskProvider
 
 class KotPlugin : Plugin<Project> {
 
@@ -14,7 +15,7 @@ class KotPlugin : Plugin<Project> {
         )
 
         // register (not create) keeps the task lazy: this lambda runs only when a build actually needs the task.
-        project.tasks.register(
+        val verifyTask: TaskProvider<VerifyConsumerFloorTask> = project.tasks.register(
             /* name = */ VERIFY_CONSUMER_FLOOR_TASK_NAME,
             /* type = */ VerifyConsumerFloorTask::class.java
         ) { task: VerifyConsumerFloorTask ->
@@ -32,6 +33,15 @@ class KotPlugin : Plugin<Project> {
             task.compileSdkFloor.convention(/* provider = */ extension.compileSdkFloor)
             task.agpFloor.convention(/* provider = */ extension.agpFloor)
             task.jvmTargetFloor.convention(/* provider = */ extension.jvmTargetFloor)
+        }
+
+        // The optional AGP layer. withId fires the block only when (and if) the consumer's project
+        // also applies the Android library plugin. No AGP type may be named in THIS class, not
+        // even inside the lambda (Kotlin compiles lambda bodies into synthetic methods of the
+        // enclosing class, and Gradle's reflective decoration loads every method signature);
+        // everything AGP-flavored lives in AgpReleaseAarWiring, loaded only when this block runs.
+        project.plugins.withId(/* pluginId = */ "com.android.library") {
+            AgpReleaseAarWiring.wire(project = project, verifyTask = verifyTask)
         }
     }
 

@@ -7,6 +7,7 @@ group = "io.github.ahmetsirim" // Published coordinates: group:name:version; nam
 version = "0.1.0-SNAPSHOT"
 
 repositories {
+    google() // AGP's gradle-api lives on Google's Maven repository.
     mavenCentral()
 }
 
@@ -20,6 +21,10 @@ dependencies {
     // runtime; a plugin's dependencies land on the consuming build's classpath, shared with every
     // other plugin of that build (why version conflicts are a plugin author's classic gotcha).
     implementation(libs.asm)
+
+    // Compiled against, never bundled: the consumer's own AGP provides these classes at runtime.
+    // Pinned to the lowest AGP whose Variants API we rely on, so newer API never sneaks in.
+    compileOnly(libs.agp.api)
 }
 
 // Single source for two outputs: the plugin descriptor (how Gradle maps the applied id to our
