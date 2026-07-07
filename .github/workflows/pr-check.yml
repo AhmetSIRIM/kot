@@ -10,34 +10,70 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The job only reads the repository; granting nothing else keeps a compromised dependency
+# Every job only reads the repository; granting nothing else keeps a compromised dependency
 # from writing back.
 permissions:
   contents: read
 
 jobs:
-  check:
+  # The behavioral spec: all functional tests, including the real-AGP end-to-end test
+  # (the ubuntu runner image ships the Android SDK preinstalled).
+  functional-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      # Wires Gradle build caching into Actions; the AGP end-to-end test's dependency
-      # downloads are paid once, then served from cache.
-      - uses: gradle/actions/setup-gradle@v6
-
-      # The whole gate: compilation, validatePlugins, and the functional suite, including
-      # the real-AGP test (the ubuntu runner image ships the Android SDK preinstalled).
-      - name: Run check
-        run: ./gradlew check --stacktrace
-
-      # Test reports only matter when something failed; upload them for post-mortem then.
+      - uses: ./.github/actions/setup
+      - name: Run functional tests
+        run: ./gradlew functionalTest --stacktrace
+      # Reports only matter when something failed; upload them for post-mortem then.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: test-reports
-          path: build/reports/tests/
+          name: functional-test-reports
+          path: build/reports/tests/functionalTest/
+
+  # Static analysis; rules build upon detekt's defaults with the deviations kept in
+  # config/detekt/detekt.yml.
+  detekt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Run detekt
+        run: ./gradlew detekt
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: detekt-reports
+          path: build/reports/detekt/
+
+  # KDoc gate: dokkaGenerate fails on any warning (broken doc links included), keeping the
+  # documentation shippable at every commit; it becomes the published docs at release time.
+  dokka-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Generate documentation
+        run: ./gradlew dokkaGenerate
+
+  # Static validation of the plugin's task annotations and descriptor. The stronger
+  # publishPlugins --validate-only authenticates against the Portal even without publishing,
+  # so that upgrade arrives together with the Portal keys at the publishing stage.
+  publish-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Validate plugin metadata
+        run: ./gradlew validatePlugins
+
+  # The one job branch protection marks as required: green only when every job above is.
+  summary:
+    needs: [functional-test, detekt, dokka-build, publish-validation]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when any dependency failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
