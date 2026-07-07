@@ -62,19 +62,9 @@ internal object EmittedFloorReader {
                 ?: throw GradleException("kot: classes.jar not found in ${aarFile.name}")
 
             ZipInputStream(aar.getInputStream(classesJarEntry)).use { classesJar: ZipInputStream ->
-                generateSequence { classesJar.nextEntry } // nextEntry returns null after the last entry, ending the sequence.
-                    .filter { entry: ZipEntry -> entry.name.endsWith(".class") } // Skip manifests, kotlin_module files, etc.
-                    .forEach { _: ZipEntry ->
-                        // readBytes() reads only the current entry: the stream reports end-of-entry as end-of-stream.
-                        val scanned: ScanningClassVisitor = scanClass(classBytes = classesJar.readBytes())
-
-                        // Highest values win across classes; one newer class raises the whole artifact's floor.
-                        val currentMaxClassMajorVersion: Int? = maxClassMajorVersion
-                        if (currentMaxClassMajorVersion == null || scanned.majorVersion > currentMaxClassMajorVersion) {
-                            maxClassMajorVersion = scanned.majorVersion
-                        }
-                        maxMetadataVersion = maxVersion(left = maxMetadataVersion, right = scanned.metadataVersion)
-                    }
+                val bytecodeScan: BytecodeScan = scanClassesJar(classesJar = classesJar)
+                maxClassMajorVersion = bytecodeScan.maxClassMajorVersion
+                maxMetadataVersion = bytecodeScan.maxMetadataVersion
             }
         }
 
@@ -83,6 +73,39 @@ internal object EmittedFloorReader {
             minCompileSdk = minCompileSdk,
             minAgpVersion = minAgpVersion,
             maxClassMajorVersion = maxClassMajorVersion,
+        )
+    }
+
+    /** The two facts the bytecode contributes, aggregated across every class of the archive. */
+    private data class BytecodeScan(
+        val maxClassMajorVersion: Int?,
+        val maxMetadataVersion: List<Int>?,
+    )
+
+    /**
+     * Walks every .class entry of the (already opened) classes.jar stream and keeps the HIGHEST
+     * values seen; one newer class raises the whole artifact's floor.
+     */
+    private fun scanClassesJar(classesJar: ZipInputStream): BytecodeScan {
+        var maxClassMajorVersion: Int? = null
+        var maxMetadataVersion: List<Int>? = null
+
+        generateSequence { classesJar.nextEntry } // nextEntry returns null after the last entry, ending the sequence.
+            .filter { entry: ZipEntry -> entry.name.endsWith(".class") } // Skip manifests, kotlin_module files, etc.
+            .forEach { _: ZipEntry ->
+                // readBytes() reads only the current entry: the stream reports end-of-entry as end-of-stream.
+                val scanned: ScanningClassVisitor = scanClass(classBytes = classesJar.readBytes())
+
+                val currentMaxClassMajorVersion: Int? = maxClassMajorVersion
+                if (currentMaxClassMajorVersion == null || scanned.majorVersion > currentMaxClassMajorVersion) {
+                    maxClassMajorVersion = scanned.majorVersion
+                }
+                maxMetadataVersion = maxVersion(left = maxMetadataVersion, right = scanned.metadataVersion)
+            }
+
+        return BytecodeScan(
+            maxClassMajorVersion = maxClassMajorVersion,
+            maxMetadataVersion = maxMetadataVersion,
         )
     }
 

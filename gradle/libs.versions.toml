@@ -2,6 +2,8 @@
 kotlin = "2.4.0"
 agpApi = "8.1.0"
 asm = "9.10.1"
+detekt = "1.23.8"
+dokka = "2.2.0"
 kotest = "6.2.1"
 junit = "6.1.1"
 pluginPublish = "2.1.1"
@@ -14,5 +16,7 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "pluginPublish" }

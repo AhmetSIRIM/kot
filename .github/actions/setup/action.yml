@@ -1,0 +1,13 @@
+name: Setup build environment
+description: The JDK and Gradle setup every job shares; jobs stay one uses-line away from it.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    # Wires Gradle build caching into Actions; dependency downloads are paid once per cache key.
+    - uses: gradle/actions/setup-gradle@v6

@@ -218,12 +218,18 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val emittedMaxClassMajor: Int = emittedFloors.maxClassMajorVersion
             ?: throw GradleException("kot: no .class entries found in classes.jar of $aarFileName")
 
-        val declaredFloorAsClassMajor: Int = declaredFloor + 44
+        val declaredFloorAsClassMajor: Int = declaredFloor + JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET
 
         return if (emittedMaxClassMajor > declaredFloorAsClassMajor) {
-            FloorCheckResult.Violated(line = "bytecode major version $emittedMaxClassMajor exceeds the JVM $declaredFloor floor (class-file major $declaredFloorAsClassMajor)")
+            FloorCheckResult.Violated(
+                line = "bytecode major version $emittedMaxClassMajor exceeds the JVM $declaredFloor floor " +
+                    "(class-file major $declaredFloorAsClassMajor)"
+            )
         } else {
-            FloorCheckResult.Passed(line = "bytecode major $emittedMaxClassMajor <= JVM $declaredFloor floor (class-file major $declaredFloorAsClassMajor)")
+            FloorCheckResult.Passed(
+                line = "bytecode major $emittedMaxClassMajor <= JVM $declaredFloor floor " +
+                    "(class-file major $declaredFloorAsClassMajor)"
+            )
         }
     }
 
@@ -265,6 +271,11 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             "kot: consumer floor check passed for $aarFileName:\n" +
                     passedLines.joinToString(separator = "\n") { line: String -> "  - $line" }
         )
+    }
+
+    private companion object {
+        // A class file's major version sits on this fixed offset from the Java release (Java 17 -> 61).
+        private const val JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET = 44
     }
 
     /** One dimension's verdict; the three cases drive the three sections of [reportAndGate]. */

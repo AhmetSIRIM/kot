@@ -1,10 +1,15 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.plugin.publish) // Also applies java-gradle-plugin (plugin descriptor + validatePlugins).
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.dokka)
 }
 
 group = "io.github.ahmetsirim" // Published coordinates: group:name:version; name comes from rootProject.name.
-version = "0.1.0-SNAPSHOT"
+// Tag-driven at release: the publish pipeline passes VERSION_NAME derived from the git tag
+// (and CI's Portal validation passes a fixed placeholder, since the Portal rejects -SNAPSHOT);
+// local builds fall back to the development version.
+version = providers.gradleProperty("VERSION_NAME").getOrElse("0.1.0-SNAPSHOT")
 
 repositories {
     google() // AGP's gradle-api lives on Google's Maven repository.
@@ -29,6 +34,18 @@ dependencies {
 
 // Single source for two outputs: the plugin descriptor (how Gradle maps the applied id to our
 // implementation class) and the Plugin Portal listing (everything a visitor sees on the plugin page).
+detekt {
+    // Project rules are deviations from detekt's defaults, not a from-scratch rule set.
+    buildUponDefaultConfig = true
+    config.setFrom("config/detekt/detekt.yml")
+}
+
+dokka {
+    dokkaPublications.configureEach {
+        failOnWarning = true // KDoc is a first-class artifact here; a broken doc link fails the build.
+    }
+}
+
 gradlePlugin {
     website = "https://github.com/AhmetSIRIM/kot" // Rendered as links on the Portal page.
     vcsUrl = "https://github.com/AhmetSIRIM/kot"
