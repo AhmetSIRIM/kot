@@ -10,12 +10,14 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 
 /**
  * Producer-side gate over a built AAR: reads the consumer floors the artifact actually emits
  * and fails the build when any of them demands more than the floors declared in the kot { } block.
  */
+@DisableCachingByDefault(because = "A pure verification gate with no outputs; there is nothing to cache")
 abstract class VerifyConsumerFloorTask : DefaultTask() {
 
     // Declared inputs (every abstract property below: the artifact through @InputFile because a
