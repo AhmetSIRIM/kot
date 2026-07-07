@@ -1,0 +1,98 @@
+name: Publish
+
+# workflow_dispatch is the manual re-run door: launched against a tag it re-enters the same
+# validation; launched from a branch it validates nothing and publishes nothing.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# A publish must never be cancelled halfway by a newer trigger.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Release-only and canonical on purpose: vMAJOR.MINOR.PATCH, no suffix, no leading zeros.
+      # A suffixed tag (-rc.1, -SNAPSHOT) is almost always a mistake here (the scheme ships no
+      # pre-releases, and the Portal rejects snapshots), and a leading zero (v0.01.0) would
+      # neither publish verbatim nor sort correctly in the monotonic step below.
+      - name: Assert tag is a canonical release version
+        if: github.ref_type == 'tag'
+        run: |
+          echo "Validating tag: ${GITHUB_REF_NAME}"
+          echo "${GITHUB_REF_NAME}" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' \
+            || { echo "Tag '${GITHUB_REF_NAME}' is not a valid release version vMAJOR.MINOR.PATCH (canonical numbers, no suffix)."; exit 1; }
+
+      # Rejects a version that is not strictly greater than the highest already-released one,
+      # catching an accidental downgrade an immutable registry would accept and never undo.
+      # Git tags are the source of truth (published tags are never re-pointed or deleted, so
+      # they are a superset of what is published); the tag fetch is fail-closed in its own
+      # statement, the current tag is excluded so a dispatch re-run of the same tag passes,
+      # and sort -V compares semver numerically (1.10.0 above 1.9.0).
+      - name: Assert version is monotonic
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          new="${GITHUB_REF_NAME#v}"
+          tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/tags" --jq '.[].name')"
+          latest="$(
+            printf '%s\n' "${tags}" \
+              | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' \
+              | grep -vxF -- "${GITHUB_REF_NAME}" \
+              | sed 's/^v//' \
+              | sort -V \
+              | tail -n1 || true
+          )"
+          if [ -z "${latest}" ]; then
+            echo "No prior release tag; treating ${GITHUB_REF_NAME} as the initial release."
+            exit 0
+          fi
+          if [ "${new}" = "${latest}" ] || \
+             [ "$(printf '%s\n%s\n' "${new}" "${latest}" | sort -V | tail -n1)" != "${new}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} is not strictly greater than the latest released version (v${latest}); refusing a downgrade or re-release."
+            exit 1
+          fi
+          echo "Monotonic check passed: ${new} is greater than ${latest}."
+
+  publish:
+    needs: [validate-tag]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # gh release create writes a release; everything else only reads.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      # The same property local builds fall back around: the tag is the single source of the
+      # published version (ORG_GRADLE_PROJECT_* env vars become Gradle project properties).
+      - name: Derive the version from the tag
+        run: echo "ORG_GRADLE_PROJECT_VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      # The pre-publish gate: the tagged commit re-proves the full check inside this very run,
+      # closing the "tag pushed from a commit that never went through a PR" hole.
+      - name: Run check
+        run: ./gradlew check --stacktrace
+
+      - name: Publish to the Gradle Plugin Portal
+        run: ./gradlew publishPlugins --stacktrace
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+
+      # The version history stays visible next to the code once the repository is public.
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
