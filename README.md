@@ -23,14 +23,20 @@ happily. And since AGP 9 ships its own bundled Kotlin compiler (built-in Kotlin)
 upgrade can raise the stamp with no change in your code, your version catalog, or your CI
 output. The floor your consumers must clear drifts silently.
 
+Automated dependency bumps make the drift routine: a Renovate or Dependabot PR that raises AGP
+(or any part of the toolchain) looks green, precisely because the producer's own build cannot
+observe the floors the new toolchain stamps. Merge it and your consumers' window narrows with
+nobody deciding that. kot turns that narrowing into a red build, so widening the floor goes
+back to being a decision.
+
 kot opens the built AAR and verifies what was actually **emitted**, not what was configured:
 
-| Dimension | Emitted where | Check |
-|---|---|---|
-| Kotlin metadata version | `@kotlin.Metadata` mv stamp on every class | `<=` declared floor |
-| `minCompileSdk` | `aar-metadata.properties` | `<=` declared floor |
-| `minAndroidGradlePluginVersion` | `aar-metadata.properties` | `=` declared floor |
-| Bytecode major version | class-file header of every class | `<=` declared floor |
+| Dimension                       | Emitted where                              | Check               |
+|---------------------------------|--------------------------------------------|---------------------|
+| Kotlin metadata version         | `@kotlin.Metadata` mv stamp on every class | `<=` declared floor |
+| `minCompileSdk`                 | `aar-metadata.properties`                  | `<=` declared floor |
+| `minAndroidGradlePluginVersion` | `aar-metadata.properties`                  | `=` declared floor  |
+| Bytecode major version          | class-file header of every class           | `<=` declared floor |
 
 ## Usage
 
