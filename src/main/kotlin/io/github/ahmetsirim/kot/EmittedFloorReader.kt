@@ -1,50 +1,79 @@
 package io.github.ahmetsirim.kot
 
 import org.gradle.api.GradleException
-import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.Opcodes
 import java.io.File
+import java.io.InputStream
 import java.util.Properties
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
-internal data class EmittedFloors(
-    val kotlinMetadataVersion: List<Int>?,
-    val minCompileSdk: Int?,
-    val minAgpVersion: String?,
-    val maxClassMajorVersion: Int?,
-)
-
+/**
+ * Reads [EmittedFloors] out of a built AAR.
+ *
+ * Background: an AAR is a plain zip. The two entries this reader cares about are
+ * aar-metadata.properties (the Android-side floors, written by AGP) and classes.jar, a nested
+ * jar (itself also a zip) holding all compiled bytecode. Classes are inspected with ASM rather
+ * than a classloader: loading a class eagerly links its supertypes, and an AAR's supertypes
+ * (Android framework types, dependencies) are not on the build's classpath.
+ */
 internal object EmittedFloorReader {
 
-    private const val AAR_METADATA_ENTRY = "META-INF/com/android/build/gradle/aar-metadata.properties"
+    private const val AAR_METADATA_ENTRY_NAME = "META-INF/com/android/build/gradle/aar-metadata.properties"
 
+    // TODO (Ahmet SIRIM): Plain-JAR support. The Kotlin metadata and bytecode dimensions apply
+    //  to any JVM artifact; only minCompileSdk and minAgpVersion are AAR-specific, and both are
+    //  already optional. The reader would branch on the archive type: a JAR's classes sit at the
+    //  top level instead of inside a nested classes.jar.
+    private const val CLASSES_JAR_ENTRY_NAME = "classes.jar"
+
+    /**
+     * Single pass over the archive: the properties entry first, then every .class inside the
+     * nested classes.jar. The nested jar is streamed with [ZipInputStream] straight out of the
+     * outer [ZipFile]; nothing is extracted to disk. Across classes the HIGHEST values win,
+     * because a single newer class raises the whole artifact's floor.
+     */
     fun read(aarFile: File): EmittedFloors {
+        // Accumulators; each starts as "fact not seen yet" and fills only when the artifact provides it.
         var minCompileSdk: Int? = null
         var minAgpVersion: String? = null
         var maxClassMajorVersion: Int? = null
         var maxMetadataVersion: List<Int>? = null
 
-        ZipFile(aarFile).use { aar ->
-            aar.getEntry(AAR_METADATA_ENTRY)?.let { metadataEntry ->
-                val properties = Properties().apply { aar.getInputStream(metadataEntry).use(::load) }
-                minCompileSdk = properties.getProperty("minCompileSdk")?.toIntOrNull()
+        ZipFile(aarFile).use { aar: ZipFile ->
+
+            // Cluster 1: the Android-side floors from aar-metadata.properties. The entry can be
+            // legitimately absent (a non-AGP archive); absence stays null here and the task
+            // judges it per declared dimension.
+            aar.getEntry(AAR_METADATA_ENTRY_NAME)?.let { metadataEntry: ZipEntry ->
+                val properties = Properties()
+                aar.getInputStream(metadataEntry).use { stream: InputStream -> properties.load(stream) }
+
+                minCompileSdk = properties.getProperty("minCompileSdk")?.toIntOrNull() // Malformed value stays null.
                 minAgpVersion = properties.getProperty("minAndroidGradlePluginVersion")
             }
 
-            val classesJarEntry = aar.getEntry("classes.jar")
+            // Cluster 2: the bytecode facts from the nested classes.jar. ZipFile offers random
+            // access by name but only over a real file on disk; the nested classes.jar is not a
+            // file, just bytes inside the outer zip, so it is walked with the forward-only
+            // ZipInputStream instead of being extracted first.
+            val classesJarEntry: ZipEntry = aar.getEntry(CLASSES_JAR_ENTRY_NAME)
                 ?: throw GradleException("kot: classes.jar not found in ${aarFile.name}")
-            ZipInputStream(aar.getInputStream(classesJarEntry)).use { classesJar ->
-                generateSequence { classesJar.nextEntry }
-                    .filter { it.name.endsWith(".class") }
-                    .forEach { _ ->
-                        val scanned = scanClass(classesJar.readBytes())
-                        if (maxClassMajorVersion == null || scanned.majorVersion > maxClassMajorVersion!!) {
+
+            ZipInputStream(aar.getInputStream(classesJarEntry)).use { classesJar: ZipInputStream ->
+                generateSequence { classesJar.nextEntry } // nextEntry returns null after the last entry, ending the sequence.
+                    .filter { entry: ZipEntry -> entry.name.endsWith(".class") } // Skip manifests, kotlin_module files, etc.
+                    .forEach { _: ZipEntry ->
+                        // readBytes() reads only the current entry: the stream reports end-of-entry as end-of-stream.
+                        val scanned: ScanningClassVisitor = scanClass(classBytes = classesJar.readBytes())
+
+                        // Highest values win across classes; one newer class raises the whole artifact's floor.
+                        val currentMaxClassMajorVersion: Int? = maxClassMajorVersion
+                        if (currentMaxClassMajorVersion == null || scanned.majorVersion > currentMaxClassMajorVersion) {
                             maxClassMajorVersion = scanned.majorVersion
                         }
-                        maxMetadataVersion = maxVersion(maxMetadataVersion, scanned.metadataVersion)
+                        maxMetadataVersion = maxVersion(left = maxMetadataVersion, right = scanned.metadataVersion)
                     }
             }
         }
@@ -57,52 +86,27 @@ internal object EmittedFloorReader {
         )
     }
 
+    /**
+     * Runs one class's bytes through ASM: [ClassReader] parses the class-file format and replays
+     * it onto a fresh [ScanningClassVisitor], which is returned with its findings. The SKIP_*
+     * flags leave out method bodies, debug info and stack frames, none of which this scan reads.
+     */
     private fun scanClass(classBytes: ByteArray): ScanningClassVisitor {
         val visitor = ScanningClassVisitor()
-        ClassReader(classBytes)
-            .accept(visitor, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+        ClassReader(classBytes).accept(
+            /* classVisitor = */ visitor,
+            /* parsingOptions = */ ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
+        )
         return visitor
     }
 
-    private fun maxVersion(left: List<Int>?, right: List<Int>?): List<Int>? = when {
-        left == null -> right
-        right == null -> left
-        compareVersionParts(left, right) >= 0 -> left
-        else -> right
-    }
-
-    private class ScanningClassVisitor : ClassVisitor(Opcodes.ASM9) {
-        var majorVersion: Int = 0
-        var metadataVersion: List<Int>? = null
-
-        override fun visit(
-            version: Int,
-            access: Int,
-            name: String?,
-            signature: String?,
-            superName: String?,
-            interfaces: Array<out String>?,
-        ) {
-            majorVersion = version and 0xFFFF
-        }
-
-        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
-            if (descriptor != "Lkotlin/Metadata;") return null
-            return object : AnnotationVisitor(Opcodes.ASM9) {
-                // ASM delivers primitive arrays through visit(name, value) in one call,
-                // never through visitArray (that path is for non-primitive arrays only).
-                override fun visit(name: String?, value: Any?) {
-                    if (name == "mv" && value is IntArray) {
-                        metadataVersion = value.toList()
-                    }
-                }
-            }
+    /** Null-tolerant maximum: an absent side loses; two present sides compare component-wise. */
+    private fun maxVersion(left: List<Int>?, right: List<Int>?): List<Int>? {
+        return when {
+            left == null -> right
+            right == null -> left
+            compareVersionParts(left = left, right = right) >= 0 -> left
+            else -> right
         }
     }
 }
-
-internal fun compareVersionParts(left: List<Int>, right: List<Int>): Int =
-    (0 until maxOf(left.size, right.size))
-        .map { left.getOrElse(it) { 0 } - right.getOrElse(it) { 0 } }
-        .firstOrNull { it != 0 }
-        ?: 0
