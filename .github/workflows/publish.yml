@@ -95,8 +95,17 @@ jobs:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
 
-      # The version history stays visible next to the code once the repository is public.
+      # The version history stays visible next to the code once the repository is public; the
+      # note leads with the exact snippet a consumer pastes. Re-runs skip instead of failing
+      # when the release already exists (a tag re-run stops earlier anyway, at the Portal
+      # rejecting the already-live version).
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists; skipping."
+          else
+            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes \
+              --notes "Published to the Gradle Plugin Portal: \`id(\"io.github.ahmetsirim.kot\") version \"${GITHUB_REF_NAME#v}\"\`"
+          fi

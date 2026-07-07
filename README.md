@@ -1,5 +1,7 @@
 # kot
 
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.ahmetsirim.kot)](https://plugins.gradle.org/plugin/io.github.ahmetsirim.kot)
+
 Producer-side verification of the consumer floors your Android library actually ships.
 
 > **Tip:** *kot* is the Turkish construction term for a surveyed elevation level; *kot farkı* is
@@ -94,11 +96,31 @@ Each of these is useful; none reads the emitted floor on the producer's side:
 
 kot is the missing quadrant: producer-side, emitted-value verification.
 
+## Compatibility
+
+Exercised end-to-end by the functional test suite on every PR, not just claimed:
+
+| Axis   | Oldest tested | Newest tested |
+|--------|---------------|---------------|
+| AGP    | 8.1           | 9.0           |
+| Gradle | 8.5           | 9.6           |
+
+The AGP wiring compiles against the 8.1 Variants API on purpose, and a dedicated test cell
+runs the plugin inside a real AGP 8.1 / Gradle 8.5 build, so code demanding anything newer
+fails in CI rather than on a consumer's machine. The grid between the floor and the newest
+combination is on the roadmap.
+
 ## Status and roadmap
 
 Pre-release (`0.1.x`), not yet on the Gradle Plugin Portal. Planned, roughly in order:
 
-- Gradle x AGP compatibility test matrix (including `--configuration-cache` across versions)
+- The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
+  between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
 - Plain-JAR artifacts: the Kotlin metadata and bytecode dimensions apply to any JVM library
 - Published API docs (Dokka) and the Gradle Plugin Portal release
+
+## Contributing
+
+Build instructions and the conventions the build enforces live in
+[CONTRIBUTING.md](CONTRIBUTING.md).
