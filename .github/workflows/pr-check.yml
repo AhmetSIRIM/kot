@@ -79,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail when any dependency failed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+      # skipped counts as failed here: branch protection treats a skipped required check as
+      # passed, so a dependency that silently stopped running must turn this gate red.
+      - name: Fail unless every dependency succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
