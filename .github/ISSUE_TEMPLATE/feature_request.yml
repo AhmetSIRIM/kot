@@ -1,0 +1,20 @@
+name: Feature request
+description: A new dimension, a new artifact type, or an ergonomics improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What real situation does this solve? kot deliberately stays single-focus
+        (producer-side verification of emitted consumer floors), so the strongest requests
+        are grounded in a floor that drifted or a gap in the gate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should kot do, and what should its output look like?
