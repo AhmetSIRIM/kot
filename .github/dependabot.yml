@@ -5,11 +5,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    ignore:
-      # Deliberate pin: kot compiles against the LOWEST supported AGP Variants API so newer
-      # API never sneaks into code that must run on older AGP at runtime. Raising this floor
-      # is a scope decision taken in code review, not a routine version bump.
-      - dependency-name: "com.android.tools.build:gradle-api"
 
   # Action versions in workflows and the setup composite.
   - package-ecosystem: github-actions
