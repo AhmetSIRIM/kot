@@ -88,8 +88,11 @@ Each of these is useful; none reads the emitted floor on the producer's side:
 
 kot is the missing quadrant: producer-side, emitted-value verification.
 
-## Status
+## Status and roadmap
 
-Pre-release (`0.1.x`), not yet on the Gradle Plugin Portal. Planned: a Gradle x AGP
-compatibility test matrix, flavored-variant support, plain-JAR artifacts (the Kotlin metadata
-and bytecode dimensions apply to any JVM library).
+Pre-release (`0.1.x`), not yet on the Gradle Plugin Portal. Planned, roughly in order:
+
+- Gradle x AGP compatibility test matrix (including `--configuration-cache` across versions)
+- Flavored-variant support (per-variant verification instead of the single release wiring)
+- Plain-JAR artifacts: the Kotlin metadata and bytecode dimensions apply to any JVM library
+- Published API docs (Dokka) and the Gradle Plugin Portal release

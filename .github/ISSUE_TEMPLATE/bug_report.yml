@@ -1,0 +1,32 @@
+name: Bug report
+description: kot misbehaves, or the gate's verdict looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: task-output
+    attributes:
+      label: verifyConsumerFloor output
+      description: The task's output or failure message, ideally from a run with --stacktrace.
+      render: text
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: The versions in play.
+      placeholder: |
+        kot:
+        Gradle:
+        AGP:
+        Kotlin:
+      render: text
+    validations:
+      required: true
