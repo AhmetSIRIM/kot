@@ -214,6 +214,54 @@ class VerifyConsumerFloorFunctionalTest {
         secondRun.output shouldContain "Reusing configuration cache."
     }
 
+    /**
+     * A crafted class carrying TWO @kotlin.Metadata annotations (the JVM does not reject the
+     * duplicate) must not let the second, lower stamp mask the real floor: the highest stamp
+     * wins within a class, mirroring the highest-wins rule across classes. Born red from the
+     * review's adversarial finding that the visitor overwrote instead of max-accumulating,
+     * producing a false PASS, the worst outcome a gate can have.
+     */
+    @Test
+    fun `a duplicate lower metadata stamp cannot mask the real floor`() {
+        AarFixture.write(
+            destination = File(projectDir, "fixture.aar"),
+            metadataVersion = intArrayOf(2, 3, 0),
+            decoyMetadataVersion = intArrayOf(2, 0, 0),
+        )
+        writeConsumerBuild(
+            """
+            kot {
+                kotlinMetadataFloor.set("2.2")
+            }
+            """.trimIndent()
+        )
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "emitted Kotlin metadata version 2.3 exceeds the declared floor 2.2"
+    }
+
+    /**
+     * A malformed floor string is a configuration mistake and must fail as one, loudly and
+     * accurately. Born red from the review finding that unparsable parts silently became 0,
+     * turning a typo into a guaranteed-red gate with a misleading violation message.
+     */
+    @Test
+    fun `fails a malformed kotlinMetadataFloor as a configuration error`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"))
+        writeConsumerBuild(
+            """
+            kot {
+                kotlinMetadataFloor.set("2,2")
+            }
+            """.trimIndent()
+        )
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain """kotlinMetadataFloor "2,2" is not a dotted numeric version"""
+    }
+
     private fun runner(): GradleRunner = GradleRunner.create()
         .withProjectDir(projectDir)
         .withArguments("verifyConsumerFloor", "--configuration-cache")

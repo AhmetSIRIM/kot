@@ -26,6 +26,7 @@ internal object AarFixture {
     fun write(
         destination: File,
         metadataVersion: IntArray = intArrayOf(2, 2, 0), // The @kotlin.Metadata mv stamp the class will carry.
+        decoyMetadataVersion: IntArray? = null, // A SECOND (duplicate) stamp on the same class; no healthy compiler emits one.
         classMajorVersion: Int = 61, // Class-file major; 61 = Java 17 (release + 44).
         minCompileSdk: Int = 36,
         minAgpVersion: String = "8.1.0",
@@ -33,7 +34,13 @@ internal object AarFixture {
         val classesJar: ByteArray = ByteArrayOutputStream().also { buffer: ByteArrayOutputStream ->
             ZipOutputStream(buffer).use { jar: ZipOutputStream ->
                 jar.putNextEntry(ZipEntry("fixture/Sample.class"))
-                jar.write(classWithMetadata(metadataVersion = metadataVersion, classMajorVersion = classMajorVersion))
+                jar.write(
+                    classWithMetadata(
+                        metadataVersion = metadataVersion,
+                        decoyMetadataVersion = decoyMetadataVersion,
+                        classMajorVersion = classMajorVersion,
+                    )
+                )
                 jar.closeEntry()
             }
         }.toByteArray()
@@ -57,7 +64,11 @@ internal object AarFixture {
      * `@kotlin.Metadata(k = 1, mv = [...])` annotation, mirroring how kotlinc stamps the binary
      * metadata version onto every compiled class.
      */
-    private fun classWithMetadata(metadataVersion: IntArray, classMajorVersion: Int): ByteArray {
+    private fun classWithMetadata(
+        metadataVersion: IntArray,
+        decoyMetadataVersion: IntArray?,
+        classMajorVersion: Int,
+    ): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
             /* version = */ classMajorVersion,
@@ -71,6 +82,14 @@ internal object AarFixture {
             visit(/* name = */ "k", /* value = */ 1) // k = 1 marks a regular class in real metadata.
             visit(/* name = */ "mv", /* value = */ metadataVersion) // Primitive arrays go through visit in one call.
             visitEnd()
+        }
+        if (decoyMetadataVersion != null) {
+            // The JVM does not reject a duplicated annotation; ASM happily writes and replays both.
+            writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
+                visit(/* name = */ "k", /* value = */ 1)
+                visit(/* name = */ "mv", /* value = */ decoyMetadataVersion)
+                visitEnd()
+            }
         }
         writer.visitEnd()
         return writer.toByteArray()
