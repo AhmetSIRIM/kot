@@ -3,6 +3,7 @@ package io.github.ahmetsirim.kot
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
@@ -73,6 +74,13 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     @get:Optional
     abstract val jvmTargetFloor: Property<Int>
 
+    // Filled by the AGP wiring, one entry per matched release variant. More than one entry means
+    // a flavored library, where single-artifact wiring would silently verify only the last AAR;
+    // the action refuses that instead of reporting a partial truth.
+    @get:Input
+    @get:Optional
+    abstract val wiredVariantNames: ListProperty<String>
+
     /**
      * Execution-time entry point ([TaskAction] marks the method Gradle invokes when the task runs).
      *
@@ -92,6 +100,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      */
     @TaskAction
     fun verify() {
+        ensureSingleWiredVariant()
         ensureAtLeastOneFloorIsDeclared()
 
         val aarFile: File = artifact.get().asFile
@@ -105,6 +114,23 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         )
 
         reportAndGate(checkResults = checkResults, aarFileName = aarFile.name)
+    }
+
+    /**
+     * Refuses to verify a flavored library: with several release variants the single-artifact
+     * wiring holds only the LAST variant's AAR, so a green run would silently cover one flavor
+     * while the others ship unverified. A partial truth reads as coverage, so it fails instead;
+     * proper per-variant modeling is a roadmap item.
+     */
+    private fun ensureSingleWiredVariant() {
+        val wired: List<String> = wiredVariantNames.getOrElse(emptyList())
+        if (wired.size > 1) {
+            throw GradleException(
+                "kot: ${wired.size} release variants found (${wired.joinToString(separator = ", ")}); " +
+                    "the single-artifact wiring would verify only '${wired.last()}' and silently skip the rest. " +
+                    "Flavored libraries are not modeled yet."
+            )
+        }
     }
 
     /**

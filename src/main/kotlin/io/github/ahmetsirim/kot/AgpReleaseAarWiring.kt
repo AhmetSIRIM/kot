@@ -4,7 +4,9 @@ import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.api.variant.LibraryVariant
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 
 /**
  * The AGP-touching half of the plugin, isolated in its own class ON PURPOSE.
@@ -33,7 +35,7 @@ internal object AgpReleaseAarWiring {
      * the floor worth gating. Flavored libraries (several release variants) are not modeled yet;
      * with flavors, the last release variant AGP reports wins this wiring.
      */
-    fun wire(project: Project, verifyTask: TaskProvider<VerifyConsumerFloorTask>) {
+    fun wire(project: Project, verifyTask: TaskProvider<VerifyConsumerFloorTask>, extension: KotExtension) {
         val androidComponents: LibraryAndroidComponentsExtension = project
             .extensions.getByType(LibraryAndroidComponentsExtension::class.java)
 
@@ -41,8 +43,30 @@ internal object AgpReleaseAarWiring {
             /* selector = */ androidComponents.selector().withBuildType("release"),
         ) { variant: LibraryVariant ->
             verifyTask.configure { task: VerifyConsumerFloorTask ->
-                task.artifact.set(variant.artifacts.get(/* type = */ SingleArtifact.AAR))
+                // convention, not set: a consumer's explicit task-level artifact wins over the
+                // wiring, mirroring the floor properties' kot{}-vs-task precedence. With set()
+                // this callback would silently overwrite a hand-picked artifact, because
+                // onVariants fires after the consumer's script body has run.
+                task.artifact.convention(variant.artifacts.get(/* type = */ SingleArtifact.AAR))
+                // Feeds the multiple-release-variants guard in the task action; flavored
+                // libraries produce several release variants and only the last one's AAR
+                // would be verified (the roadmap models them properly later).
+                task.wiredVariantNames.add(variant.name)
             }
+        }
+
+        // The gate only earns its keep if it runs where consumers actually look: ./gradlew check.
+        // A gate that waits to be invoked by name misses exactly the silent toolchain bumps it
+        // exists to catch. Attached here (not unconditionally in KotPlugin) because with AGP the
+        // artifact is guaranteed wired; a bare JVM applier's check must not break. The dependency
+        // rides a Provider, so the attachToCheck opt-out is honored at task-graph time without
+        // reading the property during configuration.
+        project.tasks.named(/* name = */ LifecycleBasePlugin.CHECK_TASK_NAME).configure { checkTask: Task ->
+            checkTask.dependsOn(
+                extension.attachToCheck.map { attached: Boolean ->
+                    if (attached) listOf(verifyTask) else emptyList()
+                }
+            )
         }
     }
 }
