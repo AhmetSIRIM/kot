@@ -45,7 +45,7 @@ kot opens the built AAR and verifies what was actually **emitted**, not what was
 ```kotlin
 plugins {
     id("com.android.library")
-    id("io.github.ahmetsirim.kot") version "0.1.0"
+    id("io.github.ahmetsirim.kot") version "0.0.1"
 }
 
 kot {
@@ -114,7 +114,8 @@ combination is on the roadmap.
 
 ## Status and roadmap
 
-Pre-release (`0.1.x`), not yet on the Gradle Plugin Portal. Planned, roughly in order:
+Pre-release (`0.x`), awaiting first-publish approval on the Gradle Plugin Portal. Planned,
+roughly in order:
 
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
