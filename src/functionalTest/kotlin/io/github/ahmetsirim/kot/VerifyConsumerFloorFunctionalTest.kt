@@ -262,6 +262,53 @@ class VerifyConsumerFloorFunctionalTest {
         result.output shouldContain """kotlinMetadataFloor "2,2" is not a dotted numeric version"""
     }
 
+    /**
+     * The emitted-floors report: a producer always gets to SEE the consumer bounds the artifact
+     * carries, not only a verdict. Written deterministically (no timestamp), one key per
+     * measured dimension, at the conventional build/reports/kot location.
+     */
+    @Test
+    fun `writes the measured floors to the report file`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"))
+        writeConsumerBuild(
+            """
+            kot {
+                kotlinMetadataFloor.set("2.2")
+            }
+            """.trimIndent()
+        )
+
+        runner().build()
+
+        val report: String = File(projectDir, "build/reports/kot/emitted-floors.properties").readText()
+        report shouldContain "kotlinMetadataVersion=2.2.0"
+        report shouldContain "minCompileSdk=36"
+        report shouldContain "minAndroidGradlePluginVersion=8.1.0"
+        report shouldContain "maxClassMajorVersion=61"
+    }
+
+    /**
+     * The report is written BEFORE the gate decides, so a red build still leaves the measured
+     * numbers behind: a failing run is exactly when the producer wants to see what the artifact
+     * actually emits.
+     */
+    @Test
+    fun `writes the report even when the gate fails`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"), metadataVersion = intArrayOf(2, 3, 0))
+        writeConsumerBuild(
+            """
+            kot {
+                kotlinMetadataFloor.set("2.2")
+            }
+            """.trimIndent()
+        )
+
+        runner().buildAndFail()
+
+        val report: String = File(projectDir, "build/reports/kot/emitted-floors.properties").readText()
+        report shouldContain "kotlinMetadataVersion=2.3.0"
+    }
+
     private fun runner(): GradleRunner = GradleRunner.create()
         .withProjectDir(projectDir)
         .withArguments("verifyConsumerFloor", "--configuration-cache")

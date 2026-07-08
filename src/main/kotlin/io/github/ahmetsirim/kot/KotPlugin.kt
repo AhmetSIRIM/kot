@@ -34,6 +34,11 @@ class KotPlugin : Plugin<Project> {
             task.compileSdkFloor.convention(/* provider = */ extension.compileSdkFloor)
             task.agpFloor.convention(/* provider = */ extension.agpFloor)
             task.jvmTargetFloor.convention(/* provider = */ extension.jvmTargetFloor)
+            // Where the measured emitted floors land after every run; relocatable via the same
+            // convention-vs-set precedence as everything else on this task.
+            task.emittedFloorsReport.convention(
+                /* provider = */ project.layout.buildDirectory.file("reports/kot/emitted-floors.properties")
+            )
         }
 
         // The optional AGP layer. withId fires the block only when (and if) the consumer's project
