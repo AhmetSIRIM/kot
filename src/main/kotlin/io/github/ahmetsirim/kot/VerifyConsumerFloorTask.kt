@@ -10,15 +10,18 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.work.DisableCachingByDefault
 import java.io.File
 
 /**
  * Producer-side gate over a built AAR: reads the consumer floors the artifact actually emits
  * and fails the build when any of them demands more than the floors declared in the kot { } block.
  */
-@DisableCachingByDefault(because = "A pure verification gate with no outputs; there is nothing to cache")
+// Cacheable since the task gained a real output (the emitted-floors report): the same artifact
+// and floors produce the same verdict and the same report, and failures are never cached anyway.
+@CacheableTask
 abstract class VerifyConsumerFloorTask : DefaultTask() {
 
     // Declared inputs (every abstract property below: the artifact through @InputFile because a
@@ -81,6 +84,12 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     @get:Optional
     abstract val wiredVariantNames: ListProperty<String>
 
+    // The measured emitted floors, written on every run that reads the artifact (pass or fail):
+    // the producer always gets to SEE the consumer bounds the artifact carries, and downstream
+    // tasks can consume the file as an input.
+    @get:OutputFile
+    abstract val emittedFloorsReport: RegularFileProperty
+
     /**
      * Execution-time entry point ([TaskAction] marks the method Gradle invokes when the task runs).
      *
@@ -105,6 +114,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
 
         val aarFile: File = artifact.get().asFile
         val emittedFloors: EmittedFloors = EmittedFloorReader.read(aarFile = aarFile)
+        writeEmittedFloorsReport(emittedFloors = emittedFloors)
 
         val checkResults: List<FloorCheckResult> = listOf(
             checkKotlinMetadataFloor(emittedFloors = emittedFloors, aarFileName = aarFile.name),
@@ -114,6 +124,30 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         )
 
         reportAndGate(checkResults = checkResults, aarFileName = aarFile.name)
+    }
+
+    /**
+     * Persists the measured emitted floors as a properties file, written BEFORE the gate decides
+     * so it exists on failing runs too: the measurement already happened, and a red build is
+     * exactly when the numbers are wanted. Written by hand rather than Properties.store, which
+     * stamps a timestamp comment and would make the output non-deterministic for the build cache.
+     * Absent facts are omitted; the file mirrors [EmittedFloors]' nullability.
+     */
+    private fun writeEmittedFloorsReport(emittedFloors: EmittedFloors) {
+        val reportFile: File = emittedFloorsReport.get().asFile
+        reportFile.parentFile.mkdirs()
+
+        val lines: List<String> = listOfNotNull(
+            emittedFloors.kotlinMetadataVersion?.let { parts: List<Int> ->
+                "kotlinMetadataVersion=${parts.joinToString(separator = ".")}"
+            },
+            emittedFloors.minCompileSdk?.let { value: Int -> "minCompileSdk=$value" },
+            emittedFloors.minAgpVersion?.let { value: String -> "minAndroidGradlePluginVersion=$value" },
+            emittedFloors.maxClassMajorVersion?.let { value: Int -> "maxClassMajorVersion=$value" },
+        )
+        reportFile.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
+
+        logger.lifecycle("kot: emitted floors written to $reportFile")
     }
 
     /**
