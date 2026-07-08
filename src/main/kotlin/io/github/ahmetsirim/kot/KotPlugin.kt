@@ -13,6 +13,7 @@ class KotPlugin : Plugin<Project> {
             /* name = */ EXTENSION_NAME,
             /* type = */ KotExtension::class.java
         )
+        extension.attachToCheck.convention(/* value = */ true)
 
         // register (not create) keeps the task lazy: this lambda runs only when a build actually needs the task.
         val verifyTask: TaskProvider<VerifyConsumerFloorTask> = project.tasks.register(
@@ -41,7 +42,7 @@ class KotPlugin : Plugin<Project> {
         // enclosing class, and Gradle's reflective decoration loads every method signature);
         // everything AGP-flavored lives in AgpReleaseAarWiring, loaded only when this block runs.
         project.plugins.withId(/* pluginId = */ "com.android.library") {
-            AgpReleaseAarWiring.wire(project = project, verifyTask = verifyTask)
+            AgpReleaseAarWiring.wire(project = project, verifyTask = verifyTask, extension = extension)
         }
     }
 

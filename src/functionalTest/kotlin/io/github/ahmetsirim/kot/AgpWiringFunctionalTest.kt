@@ -55,7 +55,95 @@ class AgpWiringFunctionalTest {
         result.output shouldContain "minAndroidGradlePluginVersion = 8.1.0" // Round-trips from aarMetadata below.
     }
 
-    private fun writeAndroidLibraryProject() {
+    /**
+     * The gate must run where consumers actually look: a plain `./gradlew check` (what nearly
+     * every CI invokes through `build`) has to include verifyConsumerFloor without anyone
+     * remembering to call it by name. Born red from the review finding that the task was not
+     * attached to any lifecycle task, so a silent toolchain bump sailed through consumer CI.
+     * Asserted with --dry-run: the task graph is computed for real, nothing executes.
+     */
+    @Test
+    fun `check includes the gate by default`() {
+        writeAndroidLibraryProject()
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("check", "--dry-run")
+            .build()
+
+        result.output shouldContain ":verifyConsumerFloor SKIPPED"
+    }
+
+    /**
+     * The attachToCheck opt-out: declaring `attachToCheck.set(false)` in the kot { } block keeps
+     * check free of the gate for consumers who schedule verification elsewhere (a release-only
+     * pipeline, say). Pins that the Provider-backed dependency honors the property.
+     */
+    @Test
+    fun `check excludes the gate when attachToCheck is false`() {
+        writeAndroidLibraryProject(extraKotConfiguration = "attachToCheck.set(false)")
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("check", "--dry-run")
+            .build()
+
+        result.output.contains(":verifyConsumerFloor") shouldBe false
+    }
+
+    /**
+     * A hand-picked artifact must beat the automatic wiring. Born red from the review finding
+     * that the wiring used set() and silently overwrote a task-level artifact (onVariants fires
+     * after the consumer's script body). The manual artifact carries a deliberate metadata
+     * violation while the real AGP build would pass, so the failure PROVES which file was read.
+     */
+    @Test
+    fun `a task-level artifact overrides the AGP wiring`() {
+        AarFixture.write(destination = File(projectDir, "handpicked.aar"), metadataVersion = intArrayOf(9, 9, 0))
+        writeAndroidLibraryProject(
+            extraTaskConfiguration = """artifact.set(file("handpicked.aar"))""",
+        )
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("verifyConsumerFloor")
+            .buildAndFail()
+
+        result.output shouldContain "emitted Kotlin metadata version 9.9 exceeds the declared floor 2.2"
+    }
+
+    /**
+     * Flavored libraries produce several release variants, and the single-artifact wiring holds
+     * only the last one's AAR; a green run would silently cover one flavor while the others ship
+     * unverified. The gate must refuse loudly instead of reporting that partial truth. Proper
+     * per-variant modeling is a roadmap item; this pins the honest failure until it lands.
+     */
+    @Test
+    fun `refuses a flavored library instead of verifying a single flavor silently`() {
+        writeAndroidLibraryProject(
+            extraAndroidConfiguration = """
+                flavorDimensions += "tier"
+                productFlavors {
+                    create("free") { dimension = "tier" }
+                    create("paid") { dimension = "tier" }
+                }
+            """.trimIndent(),
+        )
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("verifyConsumerFloor")
+            .buildAndFail()
+
+        result.output shouldContain "2 release variants found (freeRelease, paidRelease)"
+        result.output shouldContain "Flavored libraries are not modeled yet."
+    }
+
+    private fun writeAndroidLibraryProject(
+        extraKotConfiguration: String = "",
+        extraAndroidConfiguration: String = "",
+        extraTaskConfiguration: String = "",
+    ) {
         // local.properties points AGP at the machine's SDK; ANDROID_HOME wins when set.
         val sdkDir: String = System.getenv("ANDROID_HOME")
             ?: "${System.getProperty("user.home")}/Library/Android/sdk"
@@ -78,6 +166,7 @@ class AgpWiringFunctionalTest {
             """
             import com.android.build.api.dsl.LibraryExtension
             import io.github.ahmetsirim.kot.KotExtension
+            import io.github.ahmetsirim.kot.VerifyConsumerFloorTask
 
             buildscript {
                 repositories {
@@ -103,6 +192,7 @@ class AgpWiringFunctionalTest {
                         minAgpVersion = "8.1.0"
                     }
                 }
+                $extraAndroidConfiguration
             }
 
             configure<KotExtension> {
@@ -110,6 +200,11 @@ class AgpWiringFunctionalTest {
                 compileSdkFloor.set(29)
                 agpFloor.set("8.1.0")
                 jvmTargetFloor.set(17)
+                $extraKotConfiguration
+            }
+
+            tasks.named<VerifyConsumerFloorTask>("verifyConsumerFloor") {
+                $extraTaskConfiguration
             }
             """.trimIndent()
         )

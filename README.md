@@ -60,6 +60,8 @@ Run `./gradlew verifyConsumerFloor`: the release AAR is built (the wiring rides 
 `SingleArtifact.AAR`, so the ordering comes for free) and every declared floor is verified
 against it. Behavior worth knowing:
 
+- With `com.android.library` applied, the gate also runs as part of `./gradlew check` (and so
+  `build`) by default; opt out with `attachToCheck.set(false)` in the `kot { }` block.
 - Undeclared floors are skipped, and the skip is named in the output; declaring none at all is
   an error, because a gate that guards nothing should not run green.
 - Every violated dimension is reported in a single failure, so one red build shows the full

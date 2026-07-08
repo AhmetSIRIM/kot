@@ -11,4 +11,9 @@ abstract class KotExtension {
     abstract val compileSdkFloor: Property<Int>
     abstract val agpFloor: Property<String>
     abstract val jvmTargetFloor: Property<Int>
+
+    // Whether the AGP wiring also hangs verifyConsumerFloor onto the consumer's check task
+    // (defaults to true): a gate that only runs when someone remembers to invoke it would miss
+    // exactly the silent toolchain bumps it exists to catch.
+    abstract val attachToCheck: Property<Boolean>
 }
