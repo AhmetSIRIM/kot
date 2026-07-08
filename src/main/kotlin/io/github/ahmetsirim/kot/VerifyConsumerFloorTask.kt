@@ -172,9 +172,16 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             .take(n = 2)
         val emittedVersion: String = emittedMajorMinor
             .joinToString(separator = ".")
+        // Strict parse: a malformed floor must fail the configuration mistake loudly. Falling
+        // back to 0 here would turn a typo into a guaranteed-red gate with a misleading message
+        // (or, with a floor like "99x", into a silently weakened one).
         val declaredFloorParts: List<Int> = declaredFloor
             .split(".")
-            .map { part: String -> part.toIntOrNull() ?: 0 }
+            .map { part: String ->
+                part.toIntOrNull() ?: throw GradleException(
+                    "kot: kotlinMetadataFloor \"$declaredFloor\" is not a dotted numeric version (like \"2.2\")."
+                )
+            }
 
         return if (compareVersionParts(left = emittedMajorMinor, right = declaredFloorParts) > 0) {
             FloorCheckResult.Violated(line = "emitted Kotlin metadata version $emittedVersion exceeds the declared floor $declaredFloor")

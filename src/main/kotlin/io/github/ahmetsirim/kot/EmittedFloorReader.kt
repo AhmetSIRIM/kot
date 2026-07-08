@@ -100,7 +100,7 @@ internal object EmittedFloorReader {
                 if (currentMaxClassMajorVersion == null || scanned.majorVersion > currentMaxClassMajorVersion) {
                     maxClassMajorVersion = scanned.majorVersion
                 }
-                maxMetadataVersion = maxVersion(left = maxMetadataVersion, right = scanned.metadataVersion)
+                maxMetadataVersion = maxVersionParts(left = maxMetadataVersion, right = scanned.metadataVersion)
             }
 
         return BytecodeScan(
@@ -123,13 +123,4 @@ internal object EmittedFloorReader {
         return visitor
     }
 
-    /** Null-tolerant maximum: an absent side loses; two present sides compare component-wise. */
-    private fun maxVersion(left: List<Int>?, right: List<Int>?): List<Int>? {
-        return when {
-            left == null -> right
-            right == null -> left
-            compareVersionParts(left = left, right = right) >= 0 -> left
-            else -> right
-        }
-    }
 }

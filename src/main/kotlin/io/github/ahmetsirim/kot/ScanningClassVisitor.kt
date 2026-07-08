@@ -44,7 +44,10 @@ internal class ScanningClassVisitor : ClassVisitor(Opcodes.ASM9) {
             // never through visitArray (that path is for non-primitive arrays only).
             override fun visit(name: String?, value: Any?) {
                 if (name == "mv" && value is IntArray) {
-                    metadataVersion = value.toList()
+                    // Max, not overwrite: the JVM does not reject a duplicated annotation, and a
+                    // crafted second (lower) stamp must never mask the real floor. Mirrors the
+                    // highest-wins rule the reader applies across classes.
+                    metadataVersion = maxVersionParts(left = metadataVersion, right = value.toList())
                 }
             }
         }
