@@ -89,7 +89,23 @@ jobs:
       - name: Run check
         run: ./gradlew check --stacktrace
 
+      # Makes the run re-runnable after a partial failure: publishPlugins is not idempotent
+      # (the Portal rejects an already-live version), so a failure in any LATER step would
+      # otherwise leave a run that can never go green for this tag. Checks the Portal's Maven
+      # face for the plugin marker of this exact version. Known edge: a version sitting in
+      # first-publish manual approval is not served here yet, so this guard arms itself for
+      # every release after the initial approval.
+      - name: Check whether this version is already on the Portal
+        id: portal
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          marker_url="https://plugins.gradle.org/m2/io/github/ahmetsirim/kot/io.github.ahmetsirim.kot.gradle.plugin/${version}/"
+          status="$(curl -s -o /dev/null -w '%{http_code}' "${marker_url}")"
+          echo "published=$([ "${status}" = "200" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Portal marker returned HTTP ${status} for ${version}."
+
       - name: Publish to the Gradle Plugin Portal
+        if: steps.portal.outputs.published == 'false'
         run: ./gradlew publishPlugins --stacktrace
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}

@@ -6,8 +6,15 @@ updates:
     schedule:
       interval: weekly
 
-  # Action versions in workflows and the setup composite.
+  # Action versions in the workflows. directory: / covers .github/workflows ONLY;
+  # composite actions are separate ecosystems roots and need their own entries below.
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+
+  # The setup composite's own action pins; invisible to the entry above.
+  - package-ecosystem: github-actions
+    directory: /.github/actions/setup
     schedule:
       interval: weekly
