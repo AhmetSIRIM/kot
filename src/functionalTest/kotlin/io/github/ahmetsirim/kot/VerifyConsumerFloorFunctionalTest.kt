@@ -309,6 +309,48 @@ class VerifyConsumerFloorFunctionalTest {
         report shouldContain "kotlinMetadataVersion=2.3.0"
     }
 
+    /**
+     * Equality's other direction: an artifact recording a HIGHER minAgpVersion than declared
+     * must also turn red, even though "higher" might read as stricter and therefore safer; the
+     * declaration drifted, and drift in either direction is the finding.
+     */
+    @Test
+    fun `fails when the artifact records a higher minAgpVersion than the declared floor`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"), minAgpVersion = "9.0.0")
+        writeConsumerBuild(
+            """
+            kot {
+                agpFloor.set("8.1.0")
+            }
+            """.trimIndent()
+        )
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "minAndroidGradlePluginVersion 9.0.0 does not equal the declared floor 8.1.0"
+    }
+
+    /**
+     * The class-file scale is general, not a Java 17 coincidence: Java 11 bytecode (major 55)
+     * sits exactly on an 11 floor and passes, pinning the release-plus-44 conversion at a
+     * second point of the scale.
+     */
+    @Test
+    fun `enforces the JVM floor on the class-file scale at another Java release`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"), classMajorVersion = 55)
+        writeConsumerBuild(
+            """
+            kot {
+                jvmTargetFloor.set(11)
+            }
+            """.trimIndent()
+        )
+
+        val result: BuildResult = runner().build()
+
+        result.output shouldContain "bytecode major 55 <= JVM 11 floor (class-file major 55)"
+    }
+
     private fun runner(): GradleRunner = GradleRunner.create()
         .withProjectDir(projectDir)
         .withArguments("verifyConsumerFloor", "--configuration-cache")
