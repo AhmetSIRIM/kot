@@ -48,6 +48,14 @@ plugins {
     id("io.github.ahmetsirim.kot") version "0.0.1"
 }
 
+android {
+    defaultConfig {
+        aarMetadata {
+            minAgpVersion = "8.1.0" // What agpFloor below verifies the artifact still records.
+        }
+    }
+}
+
 kot {
     kotlinMetadataFloor.set("2.2")
     compileSdkFloor.set(36)
