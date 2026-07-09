@@ -8,86 +8,131 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
+ * One synthetic class inside the fixture AAR's classes.jar, every emitted fact dialed per class.
+ *
+ * [metadataVersion] null means a plain, non-Kotlin class (no @kotlin.Metadata at all);
+ * [decoyMetadataVersion] adds a SECOND, duplicate annotation no healthy compiler emits.
+ * Not a data class on purpose: IntArray fields would make its generated equals lie.
+ */
+internal class FixtureClass(
+    val name: String = "fixture/Sample", // JVM internal name, slash-separated.
+    val classMajorVersion: Int = 61, // 61 = Java 17 (release + 44).
+    val metadataVersion: IntArray? = intArrayOf(2, 2, 0),
+    val decoyMetadataVersion: IntArray? = null,
+)
+
+/**
  * Synthesizes a minimal AAR whose emitted consumer floors are fully controlled by the test.
  *
  * The AAR is hand-built as a zip carrying exactly the entries the reader inspects: a nested
- * `classes.jar` with one ASM-generated class, and AGP's `aar-metadata.properties`. Generating
- * the class with ASM (instead of committing a prebuilt binary or running AGP in the test) lets
- * each test dial every dimension independently, including violation values no healthy toolchain
- * would emit.
+ * `classes.jar` with ASM-generated classes, and AGP's `aar-metadata.properties`. Generating
+ * the classes with ASM (instead of committing a prebuilt binary or running AGP in the test)
+ * lets each test dial every dimension independently, including violation values and broken
+ * shapes no healthy toolchain would emit.
  *
  * Matches a real AGP-built AAR in: entry paths, properties keys, `@kotlin.Metadata` annotation
  * descriptor and its `mv` int-array shape, class-file major version placement.
- * Diverges in: the class carries no real Kotlin metadata payload (only the `mv` and `k`
+ * Diverges in: the classes carry no real Kotlin metadata payload (only the `mv` and `k`
  * elements) and the AAR has no manifest or resources; the reader touches none of those.
  */
 internal object AarFixture {
 
+    /** The one-line facade most tests need: a single healthy class plus complete aar-metadata. */
     fun write(
         destination: File,
-        metadataVersion: IntArray = intArrayOf(2, 2, 0), // The @kotlin.Metadata mv stamp the class will carry.
-        decoyMetadataVersion: IntArray? = null, // A SECOND (duplicate) stamp on the same class; no healthy compiler emits one.
-        classMajorVersion: Int = 61, // Class-file major; 61 = Java 17 (release + 44).
+        metadataVersion: IntArray = intArrayOf(2, 2, 0),
+        decoyMetadataVersion: IntArray? = null,
+        classMajorVersion: Int = 61,
         minCompileSdk: Int = 36,
         minAgpVersion: String = "8.1.0",
-    ): File {
-        val classesJar: ByteArray = ByteArrayOutputStream().also { buffer: ByteArrayOutputStream ->
-            ZipOutputStream(buffer).use { jar: ZipOutputStream ->
-                jar.putNextEntry(ZipEntry("fixture/Sample.class"))
-                jar.write(
-                    classWithMetadata(
-                        metadataVersion = metadataVersion,
-                        decoyMetadataVersion = decoyMetadataVersion,
-                        classMajorVersion = classMajorVersion,
-                    )
-                )
-                jar.closeEntry()
-            }
-        }.toByteArray()
-
-        ZipOutputStream(destination.outputStream()).use { aar: ZipOutputStream ->
-            aar.putNextEntry(ZipEntry("classes.jar")) // The nested jar, exactly where AGP places it.
-            aar.write(classesJar)
-            aar.closeEntry()
-
-            aar.putNextEntry(ZipEntry("META-INF/com/android/build/gradle/aar-metadata.properties"))
-            aar.write(
-                "minCompileSdk=$minCompileSdk\nminAndroidGradlePluginVersion=$minAgpVersion\n".toByteArray()
+    ): File = writeCustom(
+        destination = destination,
+        classes = listOf(
+            FixtureClass(
+                metadataVersion = metadataVersion,
+                decoyMetadataVersion = decoyMetadataVersion,
+                classMajorVersion = classMajorVersion,
             )
-            aar.closeEntry()
+        ),
+        aarMetadataLines = listOf(
+            "minCompileSdk=$minCompileSdk",
+            "minAndroidGradlePluginVersion=$minAgpVersion",
+        ),
+    )
+
+    /**
+     * The full-control writer for edge cases: any number of classes (order = jar entry order),
+     * [aarMetadataLines] null omits the properties entry entirely (a line list allows dropping
+     * single keys), [includeClassesJar] false omits the nested jar itself.
+     */
+    fun writeCustom(
+        destination: File,
+        classes: List<FixtureClass>,
+        aarMetadataLines: List<String>?,
+        includeClassesJar: Boolean = true,
+    ): File {
+        ZipOutputStream(destination.outputStream()).use { aar: ZipOutputStream ->
+            if (includeClassesJar) {
+                aar.putNextEntry(ZipEntry("classes.jar")) // The nested jar, exactly where AGP places it.
+                aar.write(classesJarBytes(classes = classes))
+                aar.closeEntry()
+            }
+
+            if (aarMetadataLines != null) {
+                aar.putNextEntry(ZipEntry("META-INF/com/android/build/gradle/aar-metadata.properties"))
+                aar.write(aarMetadataLines.joinToString(separator = "\n", postfix = "\n").toByteArray())
+                aar.closeEntry()
+            }
         }
         return destination
     }
 
+    private fun classesJarBytes(classes: List<FixtureClass>): ByteArray {
+        return ByteArrayOutputStream().also { buffer: ByteArrayOutputStream ->
+            ZipOutputStream(buffer).use { jar: ZipOutputStream ->
+                classes.forEach { fixtureClass: FixtureClass ->
+                    jar.putNextEntry(ZipEntry("${fixtureClass.name}.class"))
+                    jar.write(classBytes(fixtureClass = fixtureClass))
+                    jar.closeEntry()
+                }
+                if (classes.isEmpty()) {
+                    // A zip with zero entries cannot be finished (ZipOutputStream throws); a
+                    // manifest keeps the jar valid while leaving it without a single class.
+                    jar.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))
+                    jar.write("Manifest-Version: 1.0\n".toByteArray())
+                    jar.closeEntry()
+                }
+            }
+        }.toByteArray()
+    }
+
     /**
-     * Emits a public class `fixture.Sample` with the requested class-file major version and a
-     * `@kotlin.Metadata(k = 1, mv = [...])` annotation, mirroring how kotlinc stamps the binary
-     * metadata version onto every compiled class.
+     * Emits one public class with the requested class-file major version and, when
+     * [FixtureClass.metadataVersion] is present, a `@kotlin.Metadata(k = 1, mv = [...])`
+     * annotation mirroring how kotlinc stamps the binary metadata version onto every class.
      */
-    private fun classWithMetadata(
-        metadataVersion: IntArray,
-        decoyMetadataVersion: IntArray?,
-        classMajorVersion: Int,
-    ): ByteArray {
+    private fun classBytes(fixtureClass: FixtureClass): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
-            /* version = */ classMajorVersion,
+            /* version = */ fixtureClass.classMajorVersion,
             /* access = */ Opcodes.ACC_PUBLIC,
-            /* name = */ "fixture/Sample",
+            /* name = */ fixtureClass.name,
             /* signature = */ null,
             /* superName = */ "java/lang/Object",
             /* interfaces = */ null,
         )
-        writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
-            visit(/* name = */ "k", /* value = */ 1) // k = 1 marks a regular class in real metadata.
-            visit(/* name = */ "mv", /* value = */ metadataVersion) // Primitive arrays go through visit in one call.
-            visitEnd()
+        fixtureClass.metadataVersion?.let { stamp: IntArray ->
+            writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
+                visit(/* name = */ "k", /* value = */ 1) // k = 1 marks a regular class in real metadata.
+                visit(/* name = */ "mv", /* value = */ stamp) // Primitive arrays go through visit in one call.
+                visitEnd()
+            }
         }
-        if (decoyMetadataVersion != null) {
+        fixtureClass.decoyMetadataVersion?.let { decoy: IntArray ->
             // The JVM does not reject a duplicated annotation; ASM happily writes and replays both.
             writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
                 visit(/* name = */ "k", /* value = */ 1)
-                visit(/* name = */ "mv", /* value = */ decoyMetadataVersion)
+                visit(/* name = */ "mv", /* value = */ decoy)
                 visitEnd()
             }
         }
