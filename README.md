@@ -45,7 +45,7 @@ kot opens the built AAR and verifies what was actually **emitted**, not what was
 ```kotlin
 plugins {
     id("com.android.library")
-    id("io.github.ahmetsirim.kot") version "0.0.1"
+    id("io.github.ahmetsirim.kot") version "<latest_version>"
 }
 
 android {
