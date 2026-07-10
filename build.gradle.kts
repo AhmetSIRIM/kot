@@ -63,8 +63,8 @@ gradlePlugin {
 // Creates a source set next to the built-in main (Android has the same concept under the hood:
 // src/debug, src/release and src/androidTest are all source sets, created for you by AGP).
 // This one holds TestKit tests that launch real Gradle builds, so it plays the androidTest
-// role; the plain unit layer is deliberately absent until logic worth isolating appears
-// (reader edge cases are the first candidate).
+// role; the built-in test source set plays the unit role (plain JVM tests, no Gradle build
+// involved).
 val functionalTest: SourceSet = sourceSets.create("functionalTest")
 
 // Makes pluginUnderTestMetadata write the plugin's classpath to a file at build time;
@@ -78,6 +78,12 @@ val functionalTestImplementation: Configuration = configurations.getByName("func
 val functionalTestRuntimeOnly: Configuration = configurations.getByName("functionalTestRuntimeOnly")
 
 dependencies {
+    // The unit layer (src/test). Kotlin's internal visibility is module-wide and the built-in
+    // test compilation is associated with main, so the tests call internal functions as-is.
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotest.assertions.core)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
     functionalTestImplementation(gradleTestKit()) // Provides GradleRunner, the entry point of every functional test.
 
     functionalTestImplementation(libs.junit.jupiter)
@@ -85,6 +91,12 @@ dependencies {
     functionalTestRuntimeOnly(libs.junit.platform.launcher) // Gradle does not put the launcher on the runtime classpath itself.
 
     functionalTestImplementation(libs.asm) // AarFixture synthesizes the fixture AAR's class files with it.
+}
+
+// The java plugin already registers the test task and hangs it on check; the only missing piece
+// is telling it to run on the JUnit Platform (JUnit 5 engines are not the default).
+tasks.test {
+    useJUnitPlatform()
 }
 
 // A source set does not run by itself; this registers an instance of the existing Test task type
