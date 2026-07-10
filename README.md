@@ -125,14 +125,14 @@ combination is on the roadmap.
 
 ## Status and roadmap
 
-Pre-release (`0.x`), awaiting first-publish approval on the Gradle Plugin Portal. Planned,
-roughly in order:
+Pre-release (`0.x`), published on the Gradle Plugin Portal. Planned, roughly in order:
 
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
 - Plain-JAR artifacts: the Kotlin metadata and bytecode dimensions apply to any JVM library
-- Published API docs (Dokka) and the Gradle Plugin Portal release
+- OpenSSF Best Practices (the bestpractices.dev self-assessment; the badge arrives with the
+  passing level, not before)
 
 ## Contributing
 
