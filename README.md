@@ -1,6 +1,8 @@
 # kot
 
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.ahmetsirim.kot)](https://plugins.gradle.org/plugin/io.github.ahmetsirim.kot)
+[![PR Check](https://github.com/AhmetSIRIM/kot/actions/workflows/pr-check.yml/badge.svg)](https://github.com/AhmetSIRIM/kot/actions/workflows/pr-check.yml)
+[![License](https://img.shields.io/github/license/AhmetSIRIM/kot)](LICENSE)
 
 Producer-side verification of the consumer floors your Android library actually ships.
 
@@ -45,7 +47,7 @@ kot opens the built AAR and verifies what was actually **emitted**, not what was
 ```kotlin
 plugins {
     id("com.android.library")
-    id("io.github.ahmetsirim.kot") version "0.0.1"
+    id("io.github.ahmetsirim.kot") version "<latest_version>"
 }
 
 android {
@@ -125,14 +127,14 @@ combination is on the roadmap.
 
 ## Status and roadmap
 
-Pre-release (`0.x`), awaiting first-publish approval on the Gradle Plugin Portal. Planned,
-roughly in order:
+Pre-release (`0.x`), published on the Gradle Plugin Portal. Planned, roughly in order:
 
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
 - Plain-JAR artifacts: the Kotlin metadata and bytecode dimensions apply to any JVM library
-- Published API docs (Dokka) and the Gradle Plugin Portal release
+- OpenSSF Best Practices (the bestpractices.dev self-assessment; the badge arrives with the
+  passing level, not before)
 
 ## Contributing
 
