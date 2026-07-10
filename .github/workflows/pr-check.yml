@@ -60,9 +60,19 @@ jobs:
       - name: Generate documentation
         run: ./gradlew dokkaGenerate
 
-  # Static validation of the plugin's task annotations and descriptor. The stronger
-  # publishPlugins --validate-only authenticates against the Portal even without publishing,
-  # so that upgrade arrives together with the Portal keys at the publishing stage.
+  # Two rings of publish validation:
+  #   - validatePlugins: the static ring (task annotations, plugin descriptor); always runs.
+  #   - publishPlugins --validate-only: the strong ring; catches on the PR what would
+  #     otherwise fail at release time, in the tag run's publish step. It submits the real
+  #     publication and the Portal judges it as if publishing: dead credentials, required
+  #     Portal metadata gone missing (description, website/vcs links, tags), a broken
+  #     sources/javadoc wiring. It needs the Portal keys, and secrets do not flow into
+  #     fork PRs, so that STEP is skipped for forks; a job-level skip would turn the
+  #     summary gate red instead (skipped counts as failed there, on purpose).
+  #
+  # VERSION_NAME=0.0.0 is a validation sentinel, not a real version: the Portal rejects a
+  # version that exists already even under --validate-only, and 0.0.0 can never be released
+  # (the publish workflow only accepts tags strictly greater than the latest release).
   publish-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -71,6 +81,12 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Validate plugin metadata
         run: ./gradlew validatePlugins
+      - name: Dry-run the publication against the Portal
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: ./gradlew publishPlugins --validate-only -PVERSION_NAME=0.0.0
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
 
   # The one job branch protection marks as required: green only when every job above is.
   summary:
