@@ -16,6 +16,23 @@ permissions:
   contents: read
 
 jobs:
+  # The unit layer alone: plain JVM tests, no TestKit, no Android SDK. Its own job on purpose:
+  # the verdict lands minutes before the functional suite finishes, and a red here names the
+  # failure class (a broken contract, not build behavior) straight from the checks list.
+  unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: unit-test-reports
+          path: build/reports/tests/test/
+
   # The behavioral spec: all functional tests, including the real-AGP end-to-end test
   # (the ubuntu runner image ships the Android SDK preinstalled).
   functional-test:
@@ -90,7 +107,7 @@ jobs:
 
   # The one job branch protection marks as required: green only when every job above is.
   summary:
-    needs: [functional-test, detekt, dokka-build, publish-validation]
+    needs: [unit-test, functional-test, detekt, dokka-build, publish-validation]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
