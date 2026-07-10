@@ -92,6 +92,30 @@ class AgpWiringFunctionalTest {
     }
 
     /**
+     * A library whose release variant is disabled never wires an artifact, so its check must
+     * stay free of the gate instead of failing Gradle's input validation with a cryptic
+     * unset-property error. Born red from the round-2 review finding that the check attachment
+     * was unconditional while the wiring was not.
+     */
+    @Test
+    fun `check excludes the gate when the release variant is disabled`() {
+        writeAndroidLibraryProject(
+            extraAndroidComponentsConfiguration = """
+                beforeVariants(selector().withBuildType("release")) { variantBuilder ->
+                    variantBuilder.enable = false
+                }
+            """.trimIndent(),
+        )
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("check", "--dry-run")
+            .build()
+
+        result.output.contains(":verifyConsumerFloor") shouldBe false
+    }
+
+    /**
      * A hand-picked artifact must beat the automatic wiring. Born red from the review finding
      * that the wiring used set() and silently overwrote a task-level artifact (onVariants fires
      * after the consumer's script body). The manual artifact carries a deliberate metadata
@@ -143,6 +167,7 @@ class AgpWiringFunctionalTest {
         extraKotConfiguration: String = "",
         extraAndroidConfiguration: String = "",
         extraTaskConfiguration: String = "",
+        extraAndroidComponentsConfiguration: String = "",
     ) {
         // local.properties points AGP at the machine's SDK; ANDROID_HOME wins when set.
         val sdkDir: String = System.getenv("ANDROID_HOME")
@@ -165,6 +190,7 @@ class AgpWiringFunctionalTest {
         File(projectDir, "build.gradle.kts").writeText(
             """
             import com.android.build.api.dsl.LibraryExtension
+            import com.android.build.api.variant.LibraryAndroidComponentsExtension
             import io.github.ahmetsirim.kot.KotExtension
             import io.github.ahmetsirim.kot.VerifyConsumerFloorTask
 
@@ -193,6 +219,10 @@ class AgpWiringFunctionalTest {
                     }
                 }
                 $extraAndroidConfiguration
+            }
+
+            configure<LibraryAndroidComponentsExtension> {
+                $extraAndroidComponentsConfiguration
             }
 
             configure<KotExtension> {

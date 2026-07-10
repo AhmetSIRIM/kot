@@ -53,20 +53,22 @@ internal object AgpReleaseAarWiring {
                 // would be verified (the roadmap models them properly later).
                 task.wiredVariantNames.add(variant.name)
             }
-        }
 
-        // The gate only earns its keep if it runs where consumers actually look: ./gradlew check.
-        // A gate that waits to be invoked by name misses exactly the silent toolchain bumps it
-        // exists to catch. Attached here (not unconditionally in KotPlugin) because with AGP the
-        // artifact is guaranteed wired; a bare JVM applier's check must not break. The dependency
-        // rides a Provider, so the attachToCheck opt-out is honored at task-graph time without
-        // reading the property during configuration.
-        project.tasks.named(/* name = */ LifecycleBasePlugin.CHECK_TASK_NAME).configure { checkTask: Task ->
-            checkTask.dependsOn(
-                extension.attachToCheck.map { attached: Boolean ->
-                    if (attached) listOf(verifyTask) else emptyList()
-                }
-            )
+            // The gate only earns its keep if it runs where consumers actually look: ./gradlew
+            // check. A gate that waits to be invoked by name misses exactly the silent toolchain
+            // bumps it exists to catch. Attached INSIDE the variant callback on purpose: a
+            // library whose release variant is disabled (beforeVariants { enable = false })
+            // never fires this block, never wires an artifact, and must not have its check
+            // broken by a gate with nothing to read. The dependency rides a Provider, so the
+            // attachToCheck opt-out is honored at task-graph time without reading the property
+            // during configuration.
+            project.tasks.named(/* name = */ LifecycleBasePlugin.CHECK_TASK_NAME).configure { checkTask: Task ->
+                checkTask.dependsOn(
+                    extension.attachToCheck.map { attached: Boolean ->
+                        if (attached) listOf(verifyTask) else emptyList()
+                    }
+                )
+            }
         }
     }
 }
