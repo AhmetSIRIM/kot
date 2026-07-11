@@ -129,6 +129,8 @@ combination is on the roadmap.
 
 Pre-release (`0.x`), published on the Gradle Plugin Portal. Planned, roughly in order:
 
+- A real-toolchain red path: one cell holding a real AGP 9 build to a lower declared
+  floor, so a genuinely emitted stamp (not a synthesized fixture) is what trips the gate
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
