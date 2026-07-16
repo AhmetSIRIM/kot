@@ -5,6 +5,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # CVE-triggered updates arrive as one PR per ecosystem instead of one per advisory.
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
 
   # Action versions in the workflows. directory: / covers .github/workflows ONLY;
   # composite actions are separate ecosystems roots and need their own entries below.
@@ -12,9 +17,17 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
 
   # The setup composite's own action pins; invisible to the entry above.
   - package-ecosystem: github-actions
     directory: /.github/actions/setup
     schedule:
       interval: weekly
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
