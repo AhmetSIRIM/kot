@@ -76,7 +76,7 @@ jobs:
     permissions:
       contents: write # gh release create writes a release; everything else only reads.
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: ./.github/actions/setup
 
       # The same property local builds fall back around: the tag is the single source of the
