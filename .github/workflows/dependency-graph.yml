@@ -4,6 +4,9 @@ name: Dependency Graph
 # Dependency Submission API. GitHub cannot parse Gradle builds statically (version catalogs
 # and dynamic resolution defeat manifest parsing), so before this job the graph only saw the
 # workflows' actions; Dependabot alerts were blind to every library dependency.
+#
+# The submitted tree is the RESOLVED one, transitives included: the part that neither a human
+# reading the version catalog nor the weekly Dependabot version updates can patrol.
 on:
   push:
     branches: [main]
