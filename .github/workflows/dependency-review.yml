@@ -1,0 +1,57 @@
+name: Dependency Review
+
+# The border gate to the inventory the dependency-graph workflow maintains: on every PR, the
+# resolved dependency tree of the PR's head is submitted as its own snapshot, and the review
+# action diffs it against main's snapshot. A newly introduced dependency carrying a known
+# vulnerability turns the PR red before it lands, instead of raising an alert after.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Gradle dependencies only enter GitHub's graph through the Submission API (static parsing
+  # cannot resolve them), so the PR needs its own snapshot before anything can be diffed.
+  submit-pr-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # The Dependency Submission API stores a snapshot on the repository.
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      # setup-java directly instead of the setup composite: dependency-submission embeds its
+      # own Gradle provisioning, so the composite's setup-gradle step would double-initialize.
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Resolve and submit the PR snapshot
+        uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+  # No checkout: the action reads both snapshots through the API. Snapshot processing is
+  # asynchronous on GitHub's side, hence the retry knobs instead of a race with the job above.
+  dependency-review:
+    needs: [submit-pr-snapshot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write # Lets the action leave its findings as a PR comment on failure.
+    steps:
+      # fail-on-severity: low on purpose: the tree is small enough that strict costs nothing,
+      # and loosening later is a one-line decision; tightening later means a hole existed.
+      - name: Review the dependency diff
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          comment-summary-in-pr: on-failure
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 120
