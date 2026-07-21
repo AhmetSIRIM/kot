@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 agpApi = "8.1.0"
 asm = "9.10.1"
 detekt = "1.23.8"
