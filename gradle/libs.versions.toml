@@ -4,7 +4,7 @@ agpApi = "8.1.0"
 asm = "9.10.1"
 detekt = "1.23.8"
 dokka = "2.2.0"
-kotest = "6.2.2"
+kotest = "6.2.3"
 junit = "6.1.2"
 pluginPublish = "2.1.1"
 
