@@ -5,6 +5,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Deliberate policy, not a stale suppression: the compileOnly AGP pin stays at the floor
+    # (the wiring compiles against the 8.1 Variants API; see the README's Compatibility
+    # section), so major/minor bumps of gradle-api only propose breaking that commitment.
+    # Patch bumps stay allowed (same API surface). Security ALERTS are unaffected: they flow
+    # from the dependency graph, not from this version-update schedule.
+    ignore:
+      - dependency-name: com.android.tools.build:gradle-api
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       # CVE-triggered updates arrive as one PR per ecosystem instead of one per advisory.
       security-updates:
