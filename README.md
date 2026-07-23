@@ -3,6 +3,7 @@
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.ahmetsirim.kot)](https://plugins.gradle.org/plugin/io.github.ahmetsirim.kot)
 [![PR Check](https://github.com/AhmetSIRIM/kot/actions/workflows/pr-check.yml/badge.svg)](https://github.com/AhmetSIRIM/kot/actions/workflows/pr-check.yml)
 [![License](https://img.shields.io/github/license/AhmetSIRIM/kot)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AhmetSIRIM/kot/badge)](https://scorecard.dev/viewer/?uri=github.com/AhmetSIRIM/kot)
 
 Producer-side verification of the consumer floors your Android library actually ships.
 
