@@ -1,3 +1,13 @@
+// Lifts Dokka's jackson transitives above known advisories: a first-level buildscript
+// dependency joins conflict resolution, where Gradle picks the highest version. Build-classpath
+// only; nothing here reaches consumers. The dokka-build gate proves the jump stays compatible.
+// TODO (Ahmet SIRIM): Remove once Dokka ships jackson >= 2.18.9 itself.
+buildscript {
+    dependencies {
+        classpath(platform("com.fasterxml.jackson:jackson-bom:2.18.9"))
+    }
+}
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.plugin.publish) // Also applies java-gradle-plugin (plugin descriptor + validatePlugins).
