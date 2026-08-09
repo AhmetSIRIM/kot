@@ -5,6 +5,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: "Europe/Istanbul"
     # Deliberate policy, not a stale suppression: the compileOnly AGP pin stays at the floor
     # (the wiring compiles against the 8.1 Variants API; see the README's Compatibility
     # section), so major/minor bumps of gradle-api only propose breaking that commitment.
@@ -25,6 +28,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: "Europe/Istanbul"
     groups:
       security-updates:
         applies-to: security-updates
@@ -35,6 +41,9 @@ updates:
     directory: /.github/actions/setup
     schedule:
       interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: "Europe/Istanbul"
     groups:
       security-updates:
         applies-to: security-updates
