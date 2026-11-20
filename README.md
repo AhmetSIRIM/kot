@@ -16,7 +16,8 @@ Producer-side verification of the consumer floors your Android library actually 
 
 Your library's build files say nothing about the minimum Kotlin version your consumers need.
 The compiler decides that, by stamping a binary metadata version into every class it emits.
-Consumers whose Kotlin is older than the stamp fail with:
+A Kotlin compiler reads metadata up to one minor version ahead of its own; consumers further
+behind than that fail with:
 
 ```
 Module was compiled with an incompatible version of Kotlin.
@@ -42,6 +43,8 @@ kot opens the built AAR and verifies what was actually **emitted**, not what was
 | `minCompileSdk`                 | `aar-metadata.properties`                  | `<=` declared floor |
 | `minAndroidGradlePluginVersion` | `aar-metadata.properties`                  | `=` declared floor  |
 | Bytecode major version          | class-file header of every class           | `<=` declared floor |
+
+Classes are read from `classes.jar` and from every jar the AAR bundles under `libs/`.
 
 ## Usage
 
@@ -83,7 +86,36 @@ against it. Behavior worth knowing:
 - The task is configuration-cache compatible.
 - A floor set directly on the task overrides the `kot { }` block.
 
-Without AGP, or to verify a hand-picked artifact, wire the input yourself:
+### What the Kotlin floor means
+
+`kotlinMetadataFloor` is a metadata version, not a compiler version. Because a Kotlin compiler
+reads metadata one minor version ahead of its own, a floor of `2.2` keeps the library readable
+for consumers on Kotlin 2.1 and newer. Declare the floor one minor above the oldest Kotlin your
+consumers use. The rule is the compiler's own; the
+[kotlin-metadata-jvm documentation](https://github.com/JetBrains/kotlin/blob/master/libraries/kotlinx-metadata/jvm/ReadMe.md)
+states it.
+
+### Libraries with product flavors
+
+A library with product flavors builds several release AARs, and kot does not pick one for you:
+verifying a single flavor silently would read as coverage of all of them. Name the AAR to verify
+on the task. Taking it from the Variants API also builds it first:
+
+```kotlin
+androidComponents {
+    onVariants(selector().withBuildType("release").withFlavor("tier" to "paid")) { variant ->
+        tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
+            artifact.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.AAR))
+        }
+    }
+}
+```
+
+The run then says that the other release variants were not checked.
+
+### Without AGP
+
+To verify an archive that no Android plugin wires in, set the input yourself:
 
 ```kotlin
 tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
@@ -116,10 +148,12 @@ kot is the missing quadrant: producer-side, emitted-value verification.
 
 Exercised end-to-end by the functional test suite on every PR, not just claimed:
 
-| Axis   | Oldest tested | Newest tested |
-|--------|---------------|---------------|
-| AGP    | 8.1           | 9.0           |
-| Gradle | 8.2           | 9.6           |
+| Axis   | Oldest tested | Newest tested                              |
+|--------|---------------|--------------------------------------------|
+| AGP    | 8.1           | 9.0                                        |
+| Gradle | 8.2           | the version this repository's wrapper pins |
+
+kot runs on JDK 17 or newer.
 
 The AGP wiring compiles against the 8.1 Variants API on purpose, and a dedicated test cell
 runs the plugin inside a real AGP 8.1 / Gradle 8.2 build, so code demanding anything newer
@@ -135,7 +169,8 @@ plugin code runs, and still fails with the protocol buffer error.
 
 ## Status and roadmap
 
-Pre-release (`0.x`), published on the Gradle Plugin Portal. Planned, roughly in order:
+Pre-release (`0.x`), published on the Gradle Plugin Portal. What each version changed is in
+[CHANGELOG.md](CHANGELOG.md). Planned, roughly in order:
 
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
