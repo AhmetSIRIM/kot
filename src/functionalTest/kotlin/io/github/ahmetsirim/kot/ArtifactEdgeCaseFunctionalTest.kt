@@ -206,6 +206,45 @@ class ArtifactEdgeCaseFunctionalTest {
         result.output shouldContain "minCompileSdk missing from aar-metadata.properties in fixture.aar"
     }
 
+    /**
+     * A value that is present but not a number is a different fault from a missing key, and the
+     * message has to say which one it is: "missing" would send the author looking for a
+     * declaration that is there.
+     */
+    @Test
+    fun `names a minCompileSdk that is not a number instead of calling it missing`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass()),
+            aarMetadataLines = listOf("minCompileSdk=thirty-six", "minAndroidGradlePluginVersion=8.1.0"),
+        )
+        writeConsumerBuild("""kot { compileSdkFloor.set(36) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain
+            "minCompileSdk in aar-metadata.properties of fixture.aar is not a number: \"thirty-six\""
+    }
+
+    /**
+     * The same value in a build that never declared the dimension: nothing is asked of it, so
+     * the run passes, and the report carries the value as it was recorded instead of dropping it.
+     */
+    @Test
+    fun `leaves a minCompileSdk that is not a number alone when the dimension is not declared`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass()),
+            aarMetadataLines = listOf("minCompileSdk=thirty-six", "minAndroidGradlePluginVersion=8.1.0"),
+        )
+        writeConsumerBuild("""kot { kotlinMetadataFloor.set("2.2") }""")
+
+        runner().build()
+
+        File(projectDir, "build/reports/kot/emitted-floors.properties").readText() shouldContain
+            "minCompileSdk=thirty-six"
+    }
+
     /** Same rule for the AGP dimension's key. */
     @Test
     fun `fails hard when the agp floor is declared but minAndroidGradlePluginVersion is missing`() {
@@ -237,9 +276,9 @@ class ArtifactEdgeCaseFunctionalTest {
     }
 
     /**
-     * A file that is not a zip at all errs CLOSED: the build fails instead of passing. The exact
-     * message belongs to the JDK's zip machinery and varies across versions, so only the failing
-     * task is pinned; wrapping it in a friendlier message is a possible future refinement.
+     * A file that is not a zip at all errs closed: the build fails instead of passing, and the
+     * failure names the file and says what is wrong with it. The JDK's own wording follows in
+     * the message and varies across versions, so only the plugin's part is pinned.
      */
     @Test
     fun `errs closed on an artifact that is not an archive`() {
@@ -249,6 +288,7 @@ class ArtifactEdgeCaseFunctionalTest {
         val result: BuildResult = runner().buildAndFail()
 
         result.output shouldContain "Execution failed for task ':verifyConsumerFloor'"
+        result.output shouldContain "kot: fixture.aar is not a readable zip archive"
     }
 
     /**

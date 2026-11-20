@@ -29,6 +29,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- An artifact that is not a zip archive fails with a message that names the file, instead of the
+  JDK's bare `ZipException`.
+- A `minCompileSdk` that is recorded but is not a number is reported as such, instead of as
+  missing.
 - Classes in the jars an AAR bundles under `libs/` are scanned too. A newer Kotlin metadata stamp
   or bytecode version there no longer passes unnoticed, so a build that was green can turn red.
 

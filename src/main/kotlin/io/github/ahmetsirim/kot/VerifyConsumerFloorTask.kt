@@ -122,7 +122,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             emittedFloors.kotlinMetadataVersion?.let { parts: List<Int> ->
                 "kotlinMetadataVersion=${parts.joinToString(separator = ".")}"
             },
-            emittedFloors.minCompileSdk?.let { value: Int -> "minCompileSdk=$value" },
+            emittedFloors.minCompileSdk?.let { value: String -> "minCompileSdk=$value" },
             emittedFloors.minAgpVersion?.let { value: String -> "minAndroidGradlePluginVersion=$value" },
             emittedFloors.maxClassMajorVersion?.let { value: Int -> "maxClassMajorVersion=$value" },
         )
@@ -235,8 +235,15 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     private fun checkCompileSdkFloor(emittedFloors: EmittedFloors, aarFileName: String): FloorCheckResult {
         val declaredFloor: Int = compileSdkFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "compileSdkFloor")
-        val emittedMinCompileSdk: Int = emittedFloors.minCompileSdk
+        val recordedMinCompileSdk: String = emittedFloors.minCompileSdk
             ?: throw GradleException("kot: minCompileSdk missing from aar-metadata.properties in $aarFileName")
+        // Judged here, not in the reader: a value this check cannot read must not fail a build
+        // that never declared the dimension.
+        val emittedMinCompileSdk: Int = recordedMinCompileSdk.toIntOrNull()
+            ?: throw GradleException(
+                "kot: minCompileSdk in aar-metadata.properties of $aarFileName " +
+                    "is not a number: \"$recordedMinCompileSdk\""
+            )
 
         return if (emittedMinCompileSdk > declaredFloor) {
             FloorCheckResult.Violated(

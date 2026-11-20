@@ -7,7 +7,7 @@ package io.github.ahmetsirim.kot
  */
 internal data class EmittedFloors(
     val kotlinMetadataVersion: List<Int>?, // Highest @kotlin.Metadata mv stamp found, as ints like [2, 2, 0].
-    val minCompileSdk: Int?, // From aar-metadata.properties; the compileSdk every consumer must reach.
+    val minCompileSdk: String?, // From aar-metadata.properties, as recorded; the compileSdk every consumer must reach.
     val minAgpVersion: String?, // From aar-metadata.properties; the AGP version every consumer must reach.
     val maxClassMajorVersion: Int?, // Highest class-file major version found across all classes.
 )
