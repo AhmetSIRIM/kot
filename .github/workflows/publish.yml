@@ -20,49 +20,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Release-only and canonical on purpose: vMAJOR.MINOR.PATCH, no suffix, no leading zeros.
-      # A suffixed tag (-rc.1, -SNAPSHOT) is almost always a mistake here (the scheme ships no
-      # pre-releases, and the Portal rejects snapshots), and a leading zero (v0.01.0) would
-      # neither publish verbatim nor sort correctly in the monotonic step below.
-      - name: Assert tag is a canonical release version
-        if: github.ref_type == 'tag'
-        run: |
-          echo "Validating tag: ${GITHUB_REF_NAME}"
-          echo "${GITHUB_REF_NAME}" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' \
-            || { echo "Tag '${GITHUB_REF_NAME}' is not a valid release version vMAJOR.MINOR.PATCH (canonical numbers, no suffix)."; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      # Rejects a version that is not strictly greater than the highest already-released one,
-      # catching an accidental downgrade an immutable registry would accept and never undo.
-      # Git tags are the source of truth (published tags are never re-pointed or deleted, so
-      # they are a superset of what is published); the tag fetch is fail-closed in its own
-      # statement, the current tag is excluded so a dispatch re-run of the same tag passes,
-      # and sort -V compares semver numerically (1.10.0 above 1.9.0).
-      - name: Assert version is monotonic
+      # Rejects a tag that is not a canonical vMAJOR.MINOR.PATCH, and a version that is not
+      # strictly greater than the highest one already released: an accidental downgrade is
+      # something an immutable registry would accept and never undo.
+      - name: Assert the tag is a publishable release version
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          new="${GITHUB_REF_NAME#v}"
-          tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/tags" --jq '.[].name')"
-          latest="$(
-            printf '%s\n' "${tags}" \
-              | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' \
-              | grep -vxF -- "${GITHUB_REF_NAME}" \
-              | sed 's/^v//' \
-              | sort -V \
-              | tail -n1 || true
-          )"
-          if [ -z "${latest}" ]; then
-            echo "No prior release tag; treating ${GITHUB_REF_NAME} as the initial release."
-            exit 0
-          fi
-          if [ "${new}" = "${latest}" ] || \
-             [ "$(printf '%s\n%s\n' "${new}" "${latest}" | sort -V | tail -n1)" != "${new}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} is not strictly greater than the latest released version (v${latest}); refusing a downgrade or re-release."
-            exit 1
-          fi
-          echo "Monotonic check passed: ${new} is greater than ${latest}."
+        run: scripts/assert-release-tag.sh "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}"
 
   publish:
     needs: [validate-tag]
@@ -97,19 +66,11 @@ jobs:
         run: ./gradlew releaseNotes
 
       # Makes the run re-runnable after a partial failure: publishPlugins is not idempotent
-      # (the Portal rejects an already-live version), so a failure in any LATER step would
-      # otherwise leave a run that can never go green for this tag. Checks the Portal's Maven
-      # face for the plugin marker of this exact version. Known edge: a version sitting in
-      # first-publish manual approval is not served here yet, so this guard arms itself for
-      # every release after the initial approval.
+      # (the Portal rejects an already-live version), so a failure in any later step would
+      # otherwise leave a run that can never go green for this tag.
       - name: Check whether this version is already on the Portal
         id: portal
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          marker_url="https://plugins.gradle.org/m2/io/github/ahmetsirim/kot/io.github.ahmetsirim.kot.gradle.plugin/${version}/"
-          status="$(curl -s -o /dev/null -w '%{http_code}' "${marker_url}")"
-          echo "published=$([ "${status}" = "200" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "Portal marker returned HTTP ${status} for ${version}."
+        run: scripts/portal-has-version.sh "${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Publish to the Gradle Plugin Portal
         if: steps.portal.outputs.published == 'false'
@@ -123,9 +84,4 @@ jobs:
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            echo "Release ${GITHUB_REF_NAME} already exists; skipping."
-          else
-            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file build/release-notes.md
-          fi
+        run: scripts/create-github-release.sh "${GITHUB_REF_NAME}" build/release-notes.md

@@ -92,9 +92,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Run actionlint
-        run: |
-          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
-          ./actionlint -color
+        run: scripts/run-actionlint.sh
+      - name: Run ShellCheck
+        run: shellcheck scripts/*.sh
       - name: Run zizmor
         env:
           GH_TOKEN: ${{ github.token }} # Lets zizmor resolve pinned SHAs against the owning repos.
