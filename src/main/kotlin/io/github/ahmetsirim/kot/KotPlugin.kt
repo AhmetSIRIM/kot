@@ -1,8 +1,10 @@
 package io.github.ahmetsirim.kot
 
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.util.GradleVersion
 
 /**
  * Registers the `kot { }` block and the `verifyConsumerFloor` task.
@@ -14,6 +16,8 @@ import org.gradle.api.tasks.TaskProvider
 class KotPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
+        ensureSupportedGradle()
+
         val extension: KotExtension = project.extensions.create(EXTENSION_NAME, KotExtension::class.java)
         extension.attachToCheck.convention(true)
 
@@ -43,7 +47,27 @@ class KotPlugin : Plugin<Project> {
         }
     }
 
+    /**
+     * Refuses a Gradle older than the oldest one the test suite runs against.
+     *
+     * A Kotlin build script cannot use this plugin on such a Gradle: the Kotlin compiler it embeds
+     * fails on the plugin's metadata with a protocol buffer error that names neither the plugin
+     * nor the cause. The plugins block is applied before the rest of the script is compiled, so
+     * for a plugin applied there this check speaks first. A script that only has the plugin on its
+     * classpath (a buildscript block, `apply false`, a convention plugin) is compiled before any
+     * plugin code runs and still fails the old way.
+     */
+    private fun ensureSupportedGradle() {
+        val current: GradleVersion = GradleVersion.current()
+        if (current.baseVersion < GradleVersion.version(MINIMUM_GRADLE_VERSION)) {
+            throw GradleException(
+                "kot: Gradle $MINIMUM_GRADLE_VERSION or newer is required; this build runs Gradle ${current.version}."
+            )
+        }
+    }
+
     private companion object {
+        private const val MINIMUM_GRADLE_VERSION = "8.2"
         private const val EXTENSION_NAME = "kot"
         private const val VERIFY_CONSUMER_FLOOR_TASK_NAME = "verifyConsumerFloor"
     }
