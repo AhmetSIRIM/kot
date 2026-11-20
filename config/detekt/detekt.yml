@@ -3,3 +3,14 @@ style:
   MaxLineLength:
     # The default 120 fights this codebase's deliberate end-of-line teaching comments.
     maxLineLength: 140
+
+comments:
+  # The public surface is what a consumer's IDE shows as quick documentation (the sources jar
+  # travels with the plugin), so every public declaration carries KDoc. Internal and private
+  # declarations are left to judgment.
+  UndocumentedPublicClass:
+    active: true
+  UndocumentedPublicFunction:
+    active: true
+  UndocumentedPublicProperty:
+    active: true
