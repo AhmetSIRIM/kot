@@ -12,10 +12,9 @@ import java.util.zip.ZipInputStream
 /**
  * Reads [EmittedFloors] out of a built AAR.
  *
- * Background: an AAR is a plain zip. The two entries this reader cares about are
- * aar-metadata.properties (the Android-side floors, written by AGP) and classes.jar, a nested
- * jar (itself also a zip) holding all compiled bytecode. Classes are inspected with ASM rather
- * than a classloader: loading a class eagerly links its supertypes, and an AAR's supertypes
+ * Two entries of the archive matter: aar-metadata.properties (the Android-side floors, written
+ * by AGP) and classes.jar, a nested jar holding the compiled bytecode. Classes are inspected with
+ * ASM rather than a classloader: loading a class links its supertypes, and an AAR's supertypes
  * (Android framework types, dependencies) are not on the build's classpath.
  */
 internal object EmittedFloorReader {
@@ -29,13 +28,12 @@ internal object EmittedFloorReader {
     private const val CLASSES_JAR_ENTRY_NAME = "classes.jar"
 
     /**
-     * Single pass over the archive: the properties entry first, then every .class inside the
-     * nested classes.jar. The nested jar is streamed with [ZipInputStream] straight out of the
-     * outer [ZipFile]; nothing is extracted to disk. Across classes the HIGHEST values win,
-     * because a single newer class raises the whole artifact's floor.
+     * Reads the properties entry, then every .class inside the nested classes.jar. The nested
+     * jar is streamed straight out of the outer archive; nothing is extracted to disk. Across
+     * classes the highest values win, because a single newer class raises the whole artifact's
+     * floor.
      */
     fun read(aarFile: File): EmittedFloors {
-        // Accumulators; each starts as "fact not seen yet" and fills only when the artifact provides it.
         var minCompileSdk: Int? = null
         var minAgpVersion: String? = null
         var maxClassMajorVersion: Int? = null
@@ -43,9 +41,8 @@ internal object EmittedFloorReader {
 
         ZipFile(aarFile).use { aar: ZipFile ->
 
-            // Cluster 1: the Android-side floors from aar-metadata.properties. The entry can be
-            // legitimately absent (a non-AGP archive); absence stays null here and the task
-            // judges it per declared dimension.
+            // The entry can be legitimately absent (a non-AGP archive); absence stays null here
+            // and the task judges it per declared dimension.
             aar.getEntry(AAR_METADATA_ENTRY_NAME)?.let { metadataEntry: ZipEntry ->
                 val properties = Properties()
                 aar.getInputStream(metadataEntry).use { stream: InputStream -> properties.load(stream) }
@@ -54,10 +51,6 @@ internal object EmittedFloorReader {
                 minAgpVersion = properties.getProperty("minAndroidGradlePluginVersion")
             }
 
-            // Cluster 2: the bytecode facts from the nested classes.jar. ZipFile offers random
-            // access by name but only over a real file on disk; the nested classes.jar is not a
-            // file, just bytes inside the outer zip, so it is walked with the forward-only
-            // ZipInputStream instead of being extracted first.
             val classesJarEntry: ZipEntry = aar.getEntry(CLASSES_JAR_ENTRY_NAME)
                 ?: throw GradleException("kot: classes.jar not found in ${aarFile.name}")
 
@@ -82,16 +75,13 @@ internal object EmittedFloorReader {
         val maxMetadataVersion: List<Int>?,
     )
 
-    /**
-     * Walks every .class entry of the (already opened) classes.jar stream and keeps the HIGHEST
-     * values seen; one newer class raises the whole artifact's floor.
-     */
+    /** Walks every .class entry of the opened classes.jar stream and keeps the highest values seen. */
     private fun scanClassesJar(classesJar: ZipInputStream): BytecodeScan {
         var maxClassMajorVersion: Int? = null
         var maxMetadataVersion: List<Int>? = null
 
-        generateSequence { classesJar.nextEntry } // nextEntry returns null after the last entry, ending the sequence.
-            .filter { entry: ZipEntry -> entry.name.endsWith(".class") } // Skip manifests, kotlin_module files, etc.
+        generateSequence { classesJar.nextEntry }
+            .filter { entry: ZipEntry -> entry.name.endsWith(".class") }
             .forEach { _: ZipEntry ->
                 // readBytes() reads only the current entry: the stream reports end-of-entry as end-of-stream.
                 val scanned: ScanningClassVisitor = scanClass(classBytes = classesJar.readBytes())
@@ -110,15 +100,14 @@ internal object EmittedFloorReader {
     }
 
     /**
-     * Runs one class's bytes through ASM: [ClassReader] parses the class-file format and replays
-     * it onto a fresh [ScanningClassVisitor], which is returned with its findings. The SKIP_*
+     * Runs one class's bytes through ASM and returns the visitor with its findings. The SKIP_*
      * flags leave out method bodies, debug info and stack frames, none of which this scan reads.
      */
     private fun scanClass(classBytes: ByteArray): ScanningClassVisitor {
         val visitor = ScanningClassVisitor()
         ClassReader(classBytes).accept(
-            /* classVisitor = */ visitor,
-            /* parsingOptions = */ ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
+            visitor,
+            ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
         )
         return visitor
     }

@@ -1,9 +1,3 @@
-# Overrides on top of detekt's default config (buildUponDefaultConfig = true in build.gradle.kts).
-style:
-  MaxLineLength:
-    # The default 120 fights this codebase's deliberate end-of-line teaching comments.
-    maxLineLength: 140
-
 comments:
   # The public surface is what a consumer's IDE shows as quick documentation (the sources jar
   # travels with the plugin), so every public declaration carries KDoc. Internal and private

@@ -114,25 +114,25 @@ internal object AarFixture {
     private fun classBytes(fixtureClass: FixtureClass): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
-            /* version = */ fixtureClass.classMajorVersion,
-            /* access = */ Opcodes.ACC_PUBLIC,
-            /* name = */ fixtureClass.name,
-            /* signature = */ null,
-            /* superName = */ "java/lang/Object",
-            /* interfaces = */ null,
+            fixtureClass.classMajorVersion,
+            Opcodes.ACC_PUBLIC,
+            fixtureClass.name,
+            null,
+            "java/lang/Object",
+            null,
         )
         fixtureClass.metadataVersion?.let { stamp: IntArray ->
-            writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
-                visit(/* name = */ "k", /* value = */ 1) // k = 1 marks a regular class in real metadata.
-                visit(/* name = */ "mv", /* value = */ stamp) // Primitive arrays go through visit in one call.
+            writer.visitAnnotation("Lkotlin/Metadata;", true).apply {
+                visit("k", 1) // k = 1 marks a regular class in real metadata.
+                visit("mv", stamp) // Primitive arrays go through visit in one call.
                 visitEnd()
             }
         }
         fixtureClass.decoyMetadataVersion?.let { decoy: IntArray ->
             // The JVM does not reject a duplicated annotation; ASM happily writes and replays both.
-            writer.visitAnnotation(/* descriptor = */ "Lkotlin/Metadata;", /* visible = */ true).apply {
-                visit(/* name = */ "k", /* value = */ 1)
-                visit(/* name = */ "mv", /* value = */ decoy)
+            writer.visitAnnotation("Lkotlin/Metadata;", true).apply {
+                visit("k", 1)
+                visit("mv", decoy)
                 visitEnd()
             }
         }

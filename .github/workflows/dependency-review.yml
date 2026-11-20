@@ -1,9 +1,7 @@
 name: Dependency Review
 
-# The border gate to the inventory the dependency-graph workflow maintains: on every PR, the
-# resolved dependency tree of the PR's head is submitted as its own snapshot, and the review
-# action diffs it against main's snapshot. A newly introduced dependency carrying a known
-# vulnerability turns the PR red before it lands, instead of raising an alert after.
+# A newly introduced dependency carrying a known vulnerability turns the PR red before it lands,
+# instead of raising an alert after.
 on:
   pull_request:
     branches: [main]

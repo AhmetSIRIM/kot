@@ -16,9 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  # The unit layer alone: plain JVM tests, no TestKit, no Android SDK. Its own job on purpose:
-  # the verdict lands minutes before the functional suite finishes, and a red here names the
-  # failure class (a broken contract, not build behavior) straight from the checks list.
+  # Its own job on purpose: the verdict lands before the functional suite finishes, and a red
+  # here names the failure class (a broken contract, not build behavior) from the checks list.
   unit-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -35,8 +34,7 @@ jobs:
           name: unit-test-reports
           path: build/reports/tests/test/
 
-  # The behavioral spec: all functional tests, including the real-AGP end-to-end test
-  # (the ubuntu runner image ships the Android SDK preinstalled).
+  # The real-AGP end-to-end tests need an Android SDK; the ubuntu runner image ships one.
   functional-test:
     runs-on: ubuntu-latest
     timeout-minutes: 20 # Cold caches pay the AGP dependency downloads; a hung daemon must not run for the default 6 hours.
@@ -47,15 +45,12 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Run functional tests
         run: ./gradlew functionalTest --stacktrace
-      # Reports only matter when something failed; upload them for post-mortem then.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: functional-test-reports
           path: build/reports/tests/functionalTest/
 
-  # Static analysis; rules build upon detekt's defaults with the deviations kept in
-  # config/detekt/detekt.yml.
   detekt:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -88,10 +83,7 @@ jobs:
       - name: Validate plugin metadata
         run: ./gradlew validatePlugins
 
-  # Lints the automation itself: actionlint catches YAML and expression mistakes (a wrong
-  # context name, a bad needs reference, a broken shell fragment), zizmor catches
-  # Actions-specific security anti-patterns (unpinned actions, credential persistence,
-  # script injection). The other jobs guard the code; this one guards the pipeline.
+  # The other jobs guard the code; this one guards the pipeline itself.
   workflow-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10

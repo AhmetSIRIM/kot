@@ -9,10 +9,6 @@ import org.gradle.api.provider.Property
  * floor at all fails the task.
  */
 abstract class KotExtension {
-    // Abstract on purpose: Gradle subclasses it at runtime and injects working Property
-    // implementations, which is why nothing here has a body. Property<T> carries the promise
-    // of a value, not the value itself: it is read at execution time, so the consumer's script
-    // order (kot { } before or after anything) never matters.
 
     /**
      * Highest Kotlin metadata version the artifact may carry, as `major.minor` (for example

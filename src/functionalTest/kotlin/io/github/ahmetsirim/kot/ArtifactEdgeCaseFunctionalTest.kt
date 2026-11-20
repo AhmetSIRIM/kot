@@ -15,7 +15,7 @@ import java.io.File
  *
  * Unmeasurable artifacts: the check functions' second exit (a declared floor whose emitted
  * counterpart cannot be read fails HARD, because a gate that cannot measure is broken, not
- * passing) previously lived only in KDoc; every one of its five paths is pinned here, plus the
+ * passing): every one of its five paths is pinned here, plus the
  * two wiring edges in front of them (a non-archive artifact and no artifact at all).
  */
 class ArtifactEdgeCaseFunctionalTest {
@@ -183,7 +183,8 @@ class ArtifactEdgeCaseFunctionalTest {
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain "no artifact to verify: the Android library wiring supplied none, and none is set on the task."
+        result.output shouldContain
+            "no artifact to verify: the Android library wiring supplied none, and none is set on the task."
     }
 
     private fun runner(): GradleRunner = GradleRunner.create()
