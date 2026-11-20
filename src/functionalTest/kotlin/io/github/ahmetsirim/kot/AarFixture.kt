@@ -8,7 +8,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * One synthetic class inside the fixture AAR's classes.jar, every emitted fact dialed per class.
+ * One synthetic class inside a jar of the fixture AAR, every emitted fact dialed per class.
  *
  * [metadataVersion] null means a plain, non-Kotlin class (no @kotlin.Metadata at all);
  * [decoyMetadataVersion] adds a SECOND, duplicate annotation no healthy compiler emits.
@@ -25,10 +25,10 @@ internal class FixtureClass(
  * Synthesizes a minimal AAR whose emitted consumer floors are fully controlled by the test.
  *
  * The AAR is hand-built as a zip carrying exactly the entries the reader inspects: a nested
- * `classes.jar` with ASM-generated classes, and AGP's `aar-metadata.properties`. Generating
- * the classes with ASM (instead of committing a prebuilt binary or running AGP in the test)
- * lets each test dial every dimension independently, including violation values and broken
- * shapes no healthy toolchain would emit.
+ * `classes.jar` with ASM-generated classes, optional jars under `libs/`, and AGP's
+ * `aar-metadata.properties`. Generating the classes with ASM (instead of committing a prebuilt
+ * binary or running AGP in the test) lets each test dial every dimension independently,
+ * including violation values and broken shapes no healthy toolchain would emit.
  *
  * Matches a real AGP-built AAR in: entry paths, properties keys, `@kotlin.Metadata` annotation
  * descriptor and its `mv` int-array shape, class-file major version placement.
@@ -63,18 +63,27 @@ internal object AarFixture {
     /**
      * The full-control writer for edge cases: any number of classes (order = jar entry order),
      * [aarMetadataLines] null omits the properties entry entirely (a line list allows dropping
-     * single keys), [includeClassesJar] false omits the nested jar itself.
+     * single keys), [includeClassesJar] false omits the nested jar itself. [bundledJars] maps a
+     * jar file name to its classes and lands under `libs/`, where AGP packs a library's local
+     * jar dependencies.
      */
     fun writeCustom(
         destination: File,
         classes: List<FixtureClass>,
         aarMetadataLines: List<String>?,
         includeClassesJar: Boolean = true,
+        bundledJars: Map<String, List<FixtureClass>> = emptyMap(),
     ): File {
         ZipOutputStream(destination.outputStream()).use { aar: ZipOutputStream ->
             if (includeClassesJar) {
                 aar.putNextEntry(ZipEntry("classes.jar")) // The nested jar, exactly where AGP places it.
                 aar.write(classesJarBytes(classes = classes))
+                aar.closeEntry()
+            }
+
+            bundledJars.forEach { (jarName: String, jarClasses: List<FixtureClass>) ->
+                aar.putNextEntry(ZipEntry("libs/$jarName"))
+                aar.write(classesJarBytes(classes = jarClasses))
                 aar.closeEntry()
             }
 

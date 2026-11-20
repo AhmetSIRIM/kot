@@ -22,6 +22,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   validation message.
 - ASM, the one dependency that ships with the plugin, moves from 9.10.1 to 9.11.1.
 
+### Fixed
+
+- Classes in the jars an AAR bundles under `libs/` are scanned too. A newer Kotlin metadata stamp
+  or bytecode version there no longer passes unnoticed, so a build that was green can turn red.
+
 ## [0.0.2] - 2026-07-11
 
 ### Added
