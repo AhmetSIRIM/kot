@@ -119,12 +119,19 @@ Exercised end-to-end by the functional test suite on every PR, not just claimed:
 | Axis   | Oldest tested | Newest tested |
 |--------|---------------|---------------|
 | AGP    | 8.1           | 9.0           |
-| Gradle | 8.5           | 9.6           |
+| Gradle | 8.2           | 9.6           |
 
 The AGP wiring compiles against the 8.1 Variants API on purpose, and a dedicated test cell
-runs the plugin inside a real AGP 8.1 / Gradle 8.5 build, so code demanding anything newer
+runs the plugin inside a real AGP 8.1 / Gradle 8.2 build, so code demanding anything newer
 fails in CI rather than on a consumer's machine. The grid between the floor and the newest
 combination is on the roadmap.
+
+Gradle 8.2 is the floor because of Kotlin build scripts: with the Kotlin version kot is built
+with today, the compiler embedded in Gradle 8.0 and 8.1 cannot read the plugin's metadata, and
+the script fails with a protocol buffer error. Applied through the `plugins { }` block, kot
+stops such a build itself and names the version it needs. A script that only has the plugin on
+its classpath (a `buildscript` block, `apply false`, a convention plugin) is compiled before any
+plugin code runs, and still fails with the protocol buffer error.
 
 ## Status and roadmap
 

@@ -128,8 +128,9 @@ class AgpFloorCompatibilityFunctionalTest {
     private companion object {
         // The declared floor: the same version the compileOnly pin compiles against.
         private const val FLOOR_AGP_VERSION = "8.1.0"
-        // A Gradle of the floor's era; AGP 8.1 requires Gradle 8.0+.
-        private const val FLOOR_GRADLE_VERSION = "8.5"
+        // The oldest Gradle the plugin accepts: the Kotlin compiler embedded in anything older
+        // fails on the plugin's metadata while compiling a build script like the one below.
+        private const val FLOOR_GRADLE_VERSION = "8.2"
         // AGP 8.x brings no built-in Kotlin; this standalone KGP stamps metadata 1.9.
         private const val FLOOR_ERA_KOTLIN_VERSION = "1.9.24"
     }

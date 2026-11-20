@@ -21,6 +21,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A run with no artifact at all fails with the task's own message instead of Gradle's input
   validation message.
 - ASM, the one dependency that ships with the plugin, moves from 9.10.1 to 9.11.1.
+- Gradle 8.2 is the oldest supported version, lower than the 8.5 stated before; the test suite
+  now runs against it.
+- On an older Gradle, a build that applies the plugin through the `plugins { }` block is refused
+  with a message that names both versions. Before, its Kotlin build script failed with a
+  protocol buffer error.
 
 ### Fixed
 
