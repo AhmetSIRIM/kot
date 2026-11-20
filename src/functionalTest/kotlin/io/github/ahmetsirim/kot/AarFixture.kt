@@ -104,8 +104,12 @@ internal object AarFixture {
         return destination
     }
 
-    /** A jar holding [classes] at its top level, as bytes; an empty list yields a jar with only a manifest. */
-    fun classesJarBytes(classes: List<FixtureClass>): ByteArray {
+    /**
+     * A jar holding [classes] at its top level, as bytes. [rawEntries] are written as they are,
+     * entry name to content, for entries no compiler would emit. With nothing to write the jar
+     * holds only a manifest.
+     */
+    fun classesJarBytes(classes: List<FixtureClass>, rawEntries: Map<String, ByteArray> = emptyMap()): ByteArray {
         return ByteArrayOutputStream().also { buffer: ByteArrayOutputStream ->
             ZipOutputStream(buffer).use { jar: ZipOutputStream ->
                 classes.forEach { fixtureClass: FixtureClass ->
@@ -113,7 +117,12 @@ internal object AarFixture {
                     jar.write(classBytes(fixtureClass = fixtureClass))
                     jar.closeEntry()
                 }
-                if (classes.isEmpty()) {
+                rawEntries.forEach { (entryName: String, content: ByteArray) ->
+                    jar.putNextEntry(ZipEntry(entryName))
+                    jar.write(content)
+                    jar.closeEntry()
+                }
+                if (classes.isEmpty() && rawEntries.isEmpty()) {
                     // A zip with zero entries cannot be finished (ZipOutputStream throws); a
                     // manifest keeps the jar valid while leaving it without a single class.
                     jar.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))

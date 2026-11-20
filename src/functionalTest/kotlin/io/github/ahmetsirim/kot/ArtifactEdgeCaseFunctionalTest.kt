@@ -330,6 +330,41 @@ class ArtifactEdgeCaseFunctionalTest {
     }
 
     /**
+     * An entry named like a class that is not one: the failure names the entry and the archive.
+     * The class reader's own wording ("Index 6 out of bounds for length 5") names neither.
+     */
+    @Test
+    fun `names an entry that is not a class file`() {
+        PlainJarFixture.write(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass()),
+            rawEntries = mapOf("notes/readme.class" to "hello".toByteArray()),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "kot: notes/readme.class in fixture.aar cannot be read as a class file"
+    }
+
+    /** The same failure inside a nested jar also names the jar the entry sits in. */
+    @Test
+    fun `names the nested jar of an entry that is not a class file`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass()),
+            aarMetadataLines = null,
+            bundledJars = mapOf("dep.jar" to listOf(FixtureClass(name = "dep/TooNew", classMajorVersion = 999))),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain
+            "kot: dep/TooNew.class in libs/dep.jar of fixture.aar cannot be read as a class file"
+    }
+
+    /**
      * A file that is not a zip at all errs closed: the build fails instead of passing, and the
      * failure names the file and says what is wrong with it. The JDK's own wording follows in
      * the message and varies across versions, so only the plugin's part is pinned.

@@ -30,6 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   no class to measure.
 - The message for an archive with no class to set a bytecode floor is reworded.
 
+### Fixed
+
+- An entry named like a class whose bytes do not start as a class file, or a class file of a
+  version the class reader does not support, fails with a message that names the entry and the
+  archive (and the nested jar it sits in), instead of the class reader's bare error.
+
 ## [0.1.0] - 2026-11-20
 
 ### Added
