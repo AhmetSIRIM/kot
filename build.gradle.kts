@@ -7,7 +7,7 @@ plugins {
 group = "io.github.ahmetsirim"
 // Tag-driven at release: the publish pipeline passes VERSION_NAME derived from the git tag;
 // local builds fall back to the development version.
-version = providers.gradleProperty("VERSION_NAME").getOrElse("0.1.0-SNAPSHOT")
+version = providers.gradleProperty("VERSION_NAME").getOrElse("0.2.0-SNAPSHOT")
 
 repositories {
     google() // AGP's gradle-api lives on Google's Maven repository.
