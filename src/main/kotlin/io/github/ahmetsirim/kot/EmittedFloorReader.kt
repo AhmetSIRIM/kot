@@ -6,6 +6,7 @@ import java.io.File
 import java.io.InputStream
 import java.util.Properties
 import java.util.zip.ZipEntry
+import java.util.zip.ZipException
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
@@ -36,12 +37,12 @@ internal object EmittedFloorReader {
      * artifact's floor.
      */
     fun read(aarFile: File): EmittedFloors {
-        var minCompileSdk: Int? = null
+        var minCompileSdk: String? = null
         var minAgpVersion: String? = null
         var maxClassMajorVersion: Int? = null
         var maxMetadataVersion: List<Int>? = null
 
-        ZipFile(aarFile).use { aar: ZipFile ->
+        openArchive(aarFile = aarFile).use { aar: ZipFile ->
 
             // The entry can be legitimately absent (a non-AGP archive); absence stays null here
             // and the task judges it per declared dimension.
@@ -49,7 +50,7 @@ internal object EmittedFloorReader {
                 val properties = Properties()
                 aar.getInputStream(metadataEntry).use { stream: InputStream -> properties.load(stream) }
 
-                minCompileSdk = properties.getProperty("minCompileSdk")?.toIntOrNull() // Malformed value stays null.
+                minCompileSdk = properties.getProperty("minCompileSdk")
                 minAgpVersion = properties.getProperty("minAndroidGradlePluginVersion")
             }
 
@@ -81,6 +82,19 @@ internal object EmittedFloorReader {
             minAgpVersion = minAgpVersion,
             maxClassMajorVersion = maxClassMajorVersion,
         )
+    }
+
+    /**
+     * Opens [aarFile] as a zip. A file the JDK cannot read as one fails here with the file's
+     * name: the JDK's own message alone ("zip END header not found") says neither which file nor
+     * that the artifact is the problem.
+     */
+    private fun openArchive(aarFile: File): ZipFile {
+        return try {
+            ZipFile(aarFile)
+        } catch (failure: ZipException) {
+            throw GradleException("kot: ${aarFile.name} is not a readable zip archive (${failure.message})", failure)
+        }
     }
 
     /** The two facts the bytecode contributes, aggregated across every class of the archive. */
