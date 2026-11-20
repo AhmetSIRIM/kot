@@ -289,7 +289,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val declaredFloor: Int = jvmTargetFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "jvmTargetFloor")
         val emittedMaxClassMajor: Int = emittedFloors.maxClassMajorVersion
-            ?: throw GradleException("kot: no .class entries found in classes.jar of $aarFileName")
+            ?: throw GradleException(
+                "kot: no .class entries found in classes.jar of $aarFileName or in the jars it bundles under libs/"
+            )
 
         val declaredFloorAsClassMajor: Int = declaredFloor + JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET
 

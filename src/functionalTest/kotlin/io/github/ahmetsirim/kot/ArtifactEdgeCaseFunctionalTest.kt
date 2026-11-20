@@ -80,6 +80,86 @@ class ArtifactEdgeCaseFunctionalTest {
         result.output shouldContain "emitted Kotlin metadata version 2.3 exceeds the declared floor 2.2"
     }
 
+    /**
+     * An AAR also carries the library's local jar dependencies, under libs/, and consumers get
+     * those classes like any other. A newer class there raises the artifact's bytecode floor
+     * even when classes.jar itself sits on the declared one.
+     */
+    @Test
+    fun `takes the class-file major version of a bundled jar into account`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(name = "fixture/Own", classMajorVersion = 61)),
+            aarMetadataLines = null,
+            bundledJars = mapOf(
+                "bundled.jar" to listOf(FixtureClass(name = "bundled/Newer", classMajorVersion = 62)),
+            ),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "bytecode major version 62 exceeds the JVM 17 floor"
+    }
+
+    /** The extension is matched without regard to case; a jar named in capitals is still a jar. */
+    @Test
+    fun `scans a bundled jar whose extension is upper case`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(name = "fixture/Own", classMajorVersion = 61)),
+            aarMetadataLines = null,
+            bundledJars = mapOf(
+                "BUNDLED.JAR" to listOf(FixtureClass(name = "bundled/Newer", classMajorVersion = 62)),
+            ),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "bytecode major version 62 exceeds the JVM 17 floor"
+    }
+
+    /** The same rule for the Kotlin dimension: a newer stamp inside a bundled jar counts. */
+    @Test
+    fun `takes the Kotlin metadata version of a bundled jar into account`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(name = "fixture/Own", metadataVersion = intArrayOf(2, 2, 0))),
+            aarMetadataLines = null,
+            bundledJars = mapOf(
+                "bundled.jar" to listOf(FixtureClass(name = "bundled/Newer", metadataVersion = intArrayOf(2, 3, 0))),
+            ),
+        )
+        writeConsumerBuild("""kot { kotlinMetadataFloor.set("2.2") }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "emitted Kotlin metadata version 2.3 exceeds the declared floor 2.2"
+    }
+
+    /**
+     * Only jars are opened: any other file under libs/ is left alone. The stray entry here is
+     * a real jar under another extension and carries a class above the floor, so reading it
+     * would turn this run red.
+     */
+    @Test
+    fun `ignores entries under libs that are not jars`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(name = "fixture/Own", classMajorVersion = 61)),
+            aarMetadataLines = null,
+            bundledJars = mapOf(
+                "notes.txt" to listOf(FixtureClass(name = "stray/Newer", classMajorVersion = 62)),
+            ),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().build()
+
+        result.output shouldContain "bytecode major 61 <= JVM 17 floor"
+    }
+
     /** No classes.jar at all: nothing bytecode-related is measurable, so the reader refuses. */
     @Test
     fun `fails hard when the archive carries no classes jar`() {
