@@ -20,42 +20,16 @@ import java.io.File
  * Producer-side gate over a built AAR: reads the consumer floors the artifact actually emits
  * and fails the build when any of them demands more than the floors declared in the kot { } block.
  */
-// Cacheable since the task gained a real output (the emitted-floors report): the same artifact
-// and floors produce the same verdict and the same report, and failures are never cached anyway.
+// Cacheable: the same artifact and floors produce the same verdict and the same report.
 @CacheableTask
 abstract class VerifyConsumerFloorTask : DefaultTask() {
 
-    // Declared inputs (every abstract property below: the artifact through @InputFile because a
-    // file's CONTENT is the input, the floors through @Input because plain values are the input;
-    // "input" = what the task consumes to produce its verdict). Gradle reads these annotations
-    // to drive three separate machineries:
-    //  - Up-to-date check: before running a task, Gradle compares every declared input with its
-    //    value from the previous run; when nothing changed the task is skipped and the build
-    //    output prints UP-TO-DATE next to it.
-    //  - Build cache: declared inputs are hashed into a cache key, so a run with the same inputs
-    //    can pull its result from the cache (local or shared with CI) instead of executing.
-    //  - Configuration cache: declared inputs are what Gradle serializes to disk, so a later
-    //    build can skip the whole configuration phase and still run this task correctly.
-    // The flip side: state read inside the action but not declared here (a path from a system
-    // property, say) is invisible to all three machineries, so Gradle may skip, cache or replay
-    // the task as if that hidden state never changed. That is the classic "task did not rerun" bug.
-
-    // RegularFileProperty is the file-flavored Property: the same lazy promise, resolving to a file.
-    // PathSensitivity declares how much of the file's PATH takes part in "did this input change",
-    // next to its content:
-    //  - ABSOLUTE: the full path counts; the same AAR under another checkout root is a change
-    //    (kills cache sharing across machines, rarely what anyone wants).
-    //  - RELATIVE: the path relative to the input's root counts; libs/a/x.aar -> libs/b/x.aar
-    //    is a change even with identical bytes.
-    //  - NAME_ONLY: only the file name counts; renaming x.aar to y.aar is a change, moving it
-    //    into another directory is not.
-    //  - NONE: only the bytes count; the same AAR moved elsewhere or renamed is still unchanged
-    //    and the task stays up-to-date.
-    // NONE fits here because the verdict depends purely on what is inside the archive.
-
-    // @Optional here does not make the artifact optional for the gate. It only moves the "no
-    // value" failure from Gradle's input validation into the action, which can say why the
-    // value is missing (see resolveArtifact).
+    // PathSensitivity.NONE: the verdict depends only on the bytes of the archive, so a moved or
+    // renamed AAR is not a change.
+    //
+    // @Optional does not make the artifact optional for the gate. It only moves the "no value"
+    // failure from Gradle's input validation into the action, which can say why the value is
+    // missing (see resolveArtifact).
 
     /**
      * The archive under verification. The AGP wiring supplies the release AAR of a library
@@ -67,10 +41,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val artifact: RegularFileProperty
 
-    // Every floor below is @Optional: without it Gradle itself fails the build when an @Input
-    // carries no value, before the action even starts; with it absence is allowed through to the
-    // action, where it means "dimension not declared" and is reported as skipped. What each floor
-    // gates, and how, is documented on its check function further down.
+    // Every floor below is @Optional: absence reaches the action, where it means "dimension not
+    // declared" and is reported as skipped.
 
     /** Task-level counterpart of [KotExtension.kotlinMetadataFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
@@ -110,21 +82,12 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     abstract val emittedFloorsReport: RegularFileProperty
 
     /**
-     * Execution-time entry point ([TaskAction] marks the method Gradle invokes when the task runs).
+     * Guards, reads the artifact once, checks each dimension, then reports and gates.
      *
-     * Background: a build passes through three phases. Initialization decides which projects take
-     * part; configuration runs every build script and plugin apply() to assemble the task graph
-     * ([KotPlugin.apply] runs there); execution runs the actions of the tasks selected for this
-     * invocation, and this method is ours. Everything before this point (property wiring, the
-     * convention links) only connected promises; the get()/orNull calls below are the first
-     * moment values are actually resolved.
-     *
-     * Orchestration only: guard, read the artifact once, check each dimension, report and gate.
-     * Every check function follows the same three-exit template: an undeclared floor returns
+     * Every check function has the same three exits: an undeclared floor returns
      * [FloorCheckResult.Skipped]; a declared floor whose emitted counterpart cannot be read out
-     * of the artifact fails hard, because a gate that cannot measure is broken, not passing;
-     * a successful measurement compares emitted against declared and returns
-     * [FloorCheckResult.Passed] or [FloorCheckResult.Violated].
+     * of the artifact fails hard, because a gate that cannot measure is broken, not passing; a
+     * successful measurement returns [FloorCheckResult.Passed] or [FloorCheckResult.Violated].
      */
     @TaskAction
     fun verify() {
@@ -145,7 +108,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Persists the measured emitted floors as a properties file, written BEFORE the gate decides
+     * Persists the measured emitted floors as a properties file, written before the gate decides
      * so it exists on failing runs too: the measurement already happened, and a red build is
      * exactly when the numbers are wanted. Written by hand rather than Properties.store, which
      * stamps a timestamp comment and would make the output non-deterministic for the build cache.
@@ -185,7 +148,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         artifact.orNull?.let { archive: RegularFile ->
             if (wired.size > 1) {
                 logger.lifecycle(
-                    "kot: ${wired.size} release variants exist ($wiredNames); only the artifact set on the task is verified."
+                    "kot: ${wired.size} release variants exist ($wiredNames); " +
+                        "only the artifact set on the task is verified."
                 )
             }
             return archive.asFile
@@ -204,10 +168,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Fails fast when the kot { } block declares nothing: a gate with no floors would run green
-     * while guarding nothing, which is worse than having no gate at all. Presence is asked via
-     * [Property.isPresent], which is true whether the value was set directly on the task or
-     * flowed in from the kot { } block through the convention link.
+     * Fails fast when no floor is declared: a gate with no floors would run green while guarding
+     * nothing, which is worse than having no gate at all.
      */
     private fun ensureAtLeastOneFloorIsDeclared() {
         val anyFloorIsDeclared: Boolean = listOf(kotlinMetadataFloor, compileSdkFloor, agpFloor, jvmTargetFloor)
@@ -254,7 +216,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             }
 
         return if (compareVersionParts(left = emittedMajorMinor, right = declaredFloorParts) > 0) {
-            FloorCheckResult.Violated(line = "emitted Kotlin metadata version $emittedVersion exceeds the declared floor $declaredFloor")
+            FloorCheckResult.Violated(
+                line = "emitted Kotlin metadata version $emittedVersion exceeds the declared floor $declaredFloor"
+            )
         } else {
             FloorCheckResult.Passed(line = "Kotlin metadata $emittedVersion <= floor $declaredFloor")
         }
@@ -275,7 +239,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             ?: throw GradleException("kot: minCompileSdk missing from aar-metadata.properties in $aarFileName")
 
         return if (emittedMinCompileSdk > declaredFloor) {
-            FloorCheckResult.Violated(line = "minCompileSdk $emittedMinCompileSdk exceeds the declared floor $declaredFloor")
+            FloorCheckResult.Violated(
+                line = "minCompileSdk $emittedMinCompileSdk exceeds the declared floor $declaredFloor"
+            )
         } else {
             FloorCheckResult.Passed(line = "minCompileSdk $emittedMinCompileSdk <= floor $declaredFloor")
         }
@@ -296,7 +262,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val declaredFloor: String = agpFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "agpFloor")
         val emittedMinAgpVersion: String = emittedFloors.minAgpVersion
-            ?: throw GradleException("kot: minAndroidGradlePluginVersion missing from aar-metadata.properties in $aarFileName")
+            ?: throw GradleException(
+                "kot: minAndroidGradlePluginVersion missing from aar-metadata.properties in $aarFileName"
+            )
 
         return if (emittedMinAgpVersion != declaredFloor) {
             FloorCheckResult.Violated(
@@ -339,20 +307,18 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Turns the per-dimension results into the task's outcome. [filterIsInstance] splits the
-     * mixed result list into its three cases, and each group feeds one section of the report:
+     * Turns the per-dimension results into the task's outcome:
      *
      *  - skipped dimensions are named out loud first; a silent skip would read as coverage,
-     *  - any violation fails the build via [GradleException], with every violated dimension
-     *    listed at once instead of stopping at the first, so one red run shows the full damage,
-     *  - the passed summary prints only on a clean run, since throwing above ends the method.
+     *  - any violation fails the build, with every violated dimension listed at once instead of
+     *    stopping at the first, so one red run shows the full damage,
+     *  - the passed summary prints only on a clean run.
      */
     private fun reportAndGate(checkResults: List<FloorCheckResult>, aarFileName: String) {
         val skippedFloorNames: List<String> = checkResults
             .filterIsInstance<FloorCheckResult.Skipped>()
             .map { skipped: FloorCheckResult.Skipped -> skipped.floorName }
         if (skippedFloorNames.isNotEmpty()) {
-            // lifecycle is Gradle's default console verbosity: visible without --info or --debug.
             logger.lifecycle("kot: skipped undeclared floors: ${skippedFloorNames.joinToString(separator = ", ")}")
         }
 

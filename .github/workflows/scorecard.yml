@@ -1,9 +1,7 @@
 name: Scorecard
 
-# OpenSSF Scorecard scores the repository's supply-chain hygiene (pinned actions, branch
-# protection, dependency update tooling, vulnerability reporting and more) and publishes the
-# result: the README badge reads it, and the SARIF upload turns findings into code scanning
-# alerts. Weekly plus on push to main, so the score follows the configuration it grades.
+# The README badge reads the published result, and the SARIF upload turns findings into code
+# scanning alerts. Weekly plus on push to main, so the score follows the configuration it grades.
 on:
   schedule:
     - cron: '23 7 * * 1'

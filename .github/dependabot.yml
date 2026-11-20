@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # The version catalog and plugin versions.
   - package-ecosystem: gradle
     directory: /
     schedule:

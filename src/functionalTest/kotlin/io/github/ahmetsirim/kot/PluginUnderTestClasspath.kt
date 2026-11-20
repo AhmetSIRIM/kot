@@ -19,7 +19,8 @@ internal object PluginUnderTestClasspath {
     /** Renders the classpath as quoted, comma-separated arguments for a files(...) call. */
     fun asKotlinArguments(): String {
         val metadata = Properties()
-        checkNotNull(PluginUnderTestClasspath::class.java.classLoader.getResourceAsStream("plugin-under-test-metadata.properties")) {
+        val classLoader: ClassLoader = PluginUnderTestClasspath::class.java.classLoader
+        checkNotNull(classLoader.getResourceAsStream("plugin-under-test-metadata.properties")) {
             "plugin-under-test-metadata.properties not found on the test classpath"
         }.use { stream: InputStream -> metadata.load(stream) }
 

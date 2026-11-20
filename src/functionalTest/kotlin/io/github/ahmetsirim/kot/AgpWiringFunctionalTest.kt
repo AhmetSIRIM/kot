@@ -27,7 +27,7 @@ import java.io.File
  * This is the slowest test of the suite (a full Android library build; AGP and its dependencies
  * are fetched into the TestKit Gradle home on first run) and it deliberately pins one AGP
  * version: the AGP version dictates the bundled Kotlin compiler, which dictates the emitted
- * metadata stamp this test asserts against. The Gradle x AGP version matrix is a later stage.
+ * metadata stamp this test asserts against.
  */
 class AgpWiringFunctionalTest {
 
@@ -58,8 +58,8 @@ class AgpWiringFunctionalTest {
     /**
      * The gate must run where consumers actually look: a plain `./gradlew check` (what nearly
      * every CI invokes through `build`) has to include verifyConsumerFloor without anyone
-     * remembering to call it by name. Born red from the review finding that the task was not
-     * attached to any lifecycle task, so a silent toolchain bump sailed through consumer CI.
+     * remembering to call it by name; otherwise a silent toolchain bump sails through consumer
+     * CI.
      * Asserted with --dry-run: the task graph is computed for real, nothing executes.
      */
     @Test
@@ -114,10 +114,10 @@ class AgpWiringFunctionalTest {
     }
 
     /**
-     * A hand-picked artifact must beat the automatic wiring. Born red from the review finding
-     * that the wiring used set() and silently overwrote a task-level artifact (onVariants fires
-     * after the consumer's script body). The manual artifact carries a deliberate metadata
-     * violation while the real AGP build would pass, so the failure PROVES which file was read.
+     * A hand-picked artifact must beat the automatic wiring: with set() the wiring would
+     * silently overwrite a task-level artifact, because onVariants fires after the consumer's
+     * script body. The manual artifact carries a deliberate metadata violation while the real
+     * AGP build would pass, so the failure proves which file was read.
      */
     @Test
     fun `a task-level artifact overrides the AGP wiring`() {

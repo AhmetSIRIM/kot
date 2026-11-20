@@ -217,9 +217,8 @@ class VerifyConsumerFloorFunctionalTest {
     /**
      * A crafted class carrying TWO @kotlin.Metadata annotations (the JVM does not reject the
      * duplicate) must not let the second, lower stamp mask the real floor: the highest stamp
-     * wins within a class, mirroring the highest-wins rule across classes. Born red from the
-     * review's adversarial finding that the visitor overwrote instead of max-accumulating,
-     * producing a false PASS, the worst outcome a gate can have.
+     * wins within a class, mirroring the highest-wins rule across classes. An overwriting
+     * visitor would produce a false pass, the worst outcome a gate can have.
      */
     @Test
     fun `a duplicate lower metadata stamp cannot mask the real floor`() {
@@ -243,8 +242,8 @@ class VerifyConsumerFloorFunctionalTest {
 
     /**
      * A malformed floor string is a configuration mistake and must fail as one, loudly and
-     * accurately. Born red from the review finding that unparsable parts silently became 0,
-     * turning a typo into a guaranteed-red gate with a misleading violation message.
+     * accurately. Reading an unparsable part as 0 would turn a typo into a guaranteed-red
+     * gate with a misleading violation message.
      */
     @Test
     fun `fails a malformed kotlinMetadataFloor as a configuration error`() {
@@ -358,9 +357,8 @@ class VerifyConsumerFloorFunctionalTest {
 
     /**
      * Writes the scratch consumer project: a settings file and a build script that applies the
-     * plugin by id, declares floors through [kotBlock], and wires the task to the fixture AAR
-     * (the wiring the AGP integration layer will eventually do per variant). [taskConfiguration]
-     * lands inside the task's configuration block, after the artifact wiring.
+     * plugin by id, declares floors through [kotBlock], and wires the task to the fixture AAR.
+     * [taskConfiguration] lands inside the task's configuration block, after the artifact wiring.
      */
     private fun writeConsumerBuild(kotBlock: String, taskConfiguration: String = "") {
         File(projectDir, "settings.gradle.kts").writeText("""rootProject.name = "consumer"""")
