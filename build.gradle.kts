@@ -39,8 +39,8 @@ gradlePlugin {
             id = "io.github.ahmetsirim.kot"
             implementationClass = "io.github.ahmetsirim.kot.KotPlugin"
             displayName = "kot"
-            description = "Verifies a built AAR's emitted consumer floor (Kotlin metadata version, minCompileSdk, minAndroidGradlePluginVersion, bytecode major) against the declared floors."
-            tags = listOf("kotlin-metadata", "aar", "android", "compatibility", "verification", "library")
+            description = "Verifies the consumer floors a built AAR or JAR emits (Kotlin metadata version, minCompileSdk, minAndroidGradlePluginVersion, bytecode major) against the declared floors."
+            tags = listOf("kotlin-metadata", "aar", "jar", "android", "jvm", "compatibility", "verification", "library")
         }
     }
 }

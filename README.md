@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/AhmetSIRIM/kot)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AhmetSIRIM/kot/badge)](https://scorecard.dev/viewer/?uri=github.com/AhmetSIRIM/kot)
 
-Producer-side verification of the consumer floors your Android library actually ships.
+Producer-side verification of the consumer floors your Android or JVM library actually ships.
 
 > **Tip:** *kot* is the Turkish construction term for a surveyed elevation level; *kot farkı* is
 > the measured difference between two levels. A build toolchain stamps elevation marks into every
@@ -41,7 +41,7 @@ metadata raised its version without a new major version, and that all 45 outside
 that record an AGP floor carry AGP's default, not a declared one. Of five release notes read, two
 announce a Kotlin upgrade and none states a minimum Kotlin version for the integrating app.
 
-kot opens the built AAR and verifies what was actually **emitted**, not what was configured:
+kot opens the built archive and verifies what was actually **emitted**, not what was configured:
 
 | Dimension                       | Emitted where                              | Check               |
 |---------------------------------|--------------------------------------------|---------------------|
@@ -50,7 +50,9 @@ kot opens the built AAR and verifies what was actually **emitted**, not what was
 | `minAndroidGradlePluginVersion` | `aar-metadata.properties`                  | `=` declared floor  |
 | Bytecode major version          | class-file header of every class           | `<=` declared floor |
 
-Classes are read from `classes.jar` and from every jar the AAR bundles under `libs/`.
+In an AAR, classes are read from `classes.jar` and from every jar bundled under `libs/`. The
+classes an archive carries itself are read too, so the two class dimensions also cover a JVM
+library's JAR; see [Plain JARs](#plain-jars).
 
 ## Usage
 
@@ -119,9 +121,35 @@ androidComponents {
 
 The run then says that the other release variants were not checked.
 
-### Without AGP
+### Plain JARs
 
-To verify an archive that no Android plugin wires in, set the input yourself:
+A JVM library has the same Kotlin metadata and bytecode floors as an Android one. No Android
+plugin wires its archive in, so set the input yourself; taking it from the `jar` task also
+builds it first:
+
+```kotlin
+kot {
+    kotlinMetadataFloor.set("2.1")
+    jvmTargetFloor.set(8)
+}
+
+tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
+    artifact.set(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+}
+```
+
+Two kinds of class do not raise a plain JAR's bytecode floor, because a consumer on an older JVM
+never loads them: the module descriptor (`module-info.class` at the archive's root) and the
+versioned classes of a multi-release JAR (under `META-INF/versions/`). A versioned class still
+counts toward the Kotlin metadata floor. Jars nested inside a plain JAR are not opened.
+
+The jars nested in an AAR (`classes.jar` and those under `libs/`) are scanned whole: a module
+descriptor or a versioned class inside one of them does count toward the bytecode floor.
+
+`compileSdkFloor` and `agpFloor` read a file only an AAR carries; declared over a plain JAR they
+fail the build, because a floor that cannot be measured is not a passing one.
+
+The same wiring verifies any archive by path, an AAR included:
 
 ```kotlin
 tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
@@ -181,7 +209,8 @@ Pre-release (`0.x`), published on the Gradle Plugin Portal. What each version ch
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
-- Plain-JAR artifacts: the Kotlin metadata and bytecode dimensions apply to any JVM library
+- Automatic wiring for JVM libraries (the `jar` task's archive, the way the release AAR is
+  wired for Android libraries)
 - OpenSSF Best Practices (the bestpractices.dev self-assessment; the badge arrives with the
   passing level, not before)
 

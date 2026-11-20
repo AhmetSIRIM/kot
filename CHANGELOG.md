@@ -7,6 +7,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Plain JARs are verified. The classes an archive carries itself are read, so the Kotlin
+  metadata and bytecode floors cover JVM libraries as well as Android ones. Among those classes,
+  a module descriptor and the versioned classes of a multi-release JAR do not raise the bytecode
+  floor, because a consumer on an older JVM never loads them. The jars nested in an AAR are
+  scanned whole, as before.
+
+### Changed
+
+- An AAR with no `classes.jar` is no longer refused outright. Its Android floors are verified
+  as before; a declared Kotlin metadata or bytecode floor still fails, because the archive has
+  no class to measure.
+- The message for an archive with no class to set a bytecode floor is reworded.
+
 ## [0.1.0] - 2026-11-20
 
 ### Added
