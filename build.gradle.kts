@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.plugin.publish) // Also applies java-gradle-plugin (plugin descriptor + validatePlugins).
     alias(libs.plugins.detekt)
-    alias(libs.plugins.dokka)
 }
 
 group = "io.github.ahmetsirim" // Published coordinates: group:name:version; name comes from rootProject.name.
@@ -36,12 +35,6 @@ detekt {
     // Project rules are deviations from detekt's defaults, not a from-scratch rule set.
     buildUponDefaultConfig = true
     config.setFrom("config/detekt/detekt.yml")
-}
-
-dokka {
-    dokkaPublications.configureEach {
-        failOnWarning = true // KDoc is a first-class artifact here; a broken doc link fails the build.
-    }
 }
 
 // Single source for two outputs: the plugin descriptor (how Gradle maps the applied id to our

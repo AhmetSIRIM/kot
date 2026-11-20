@@ -4,6 +4,12 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 
+/**
+ * Registers the `kot { }` block and the `verifyConsumerFloor` task.
+ *
+ * With the Android library plugin applied, the release AAR is wired into the task and the task
+ * joins `check`. Without it, the task's artifact is set by hand.
+ */
 class KotPlugin : Plugin<Project> {
 
     // Runs during the consumer build's configuration phase, once per project that applies the id.

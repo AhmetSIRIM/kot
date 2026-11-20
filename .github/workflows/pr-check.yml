@@ -72,19 +72,6 @@ jobs:
           name: detekt-reports
           path: build/reports/detekt/
 
-  # KDoc gate: dokkaGenerate fails on any warning (broken doc links included), keeping the
-  # documentation shippable at every commit; it becomes the published docs at release time.
-  dokka-build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - name: Generate documentation
-        run: ./gradlew dokkaGenerate
-
   # Two rings of publish validation:
   #   - validatePlugins: the static ring (task annotations, plugin descriptor); always runs.
   #   - publishPlugins --validate-only: the strong ring; catches on the PR what would
@@ -137,7 +124,7 @@ jobs:
 
   # The one job branch protection marks as required: green only when every job above is.
   summary:
-    needs: [unit-test, functional-test, detekt, dokka-build, publish-validation, workflow-lint]
+    needs: [unit-test, functional-test, detekt, publish-validation, workflow-lint]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

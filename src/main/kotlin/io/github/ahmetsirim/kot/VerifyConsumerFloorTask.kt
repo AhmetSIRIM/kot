@@ -39,7 +39,6 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     // property, say) is invisible to all three machineries, so Gradle may skip, cache or replay
     // the task as if that hidden state never changed. That is the classic "task did not rerun" bug.
 
-    // The artifact under verification; wired by hand for now, by the AGP layer per variant later.
     // RegularFileProperty is the file-flavored Property: the same lazy promise, resolving to a file.
     // PathSensitivity declares how much of the file's PATH takes part in "did this input change",
     // next to its content:
@@ -52,6 +51,11 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     //  - NONE: only the bytes count; the same AAR moved elsewhere or renamed is still unchanged
     //    and the task stays up-to-date.
     // NONE fits here because the verdict depends purely on what is inside the archive.
+
+    /**
+     * The archive under verification. The AGP wiring supplies the release AAR; a value set on
+     * the task wins over it.
+     */
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val artifact: RegularFileProperty
@@ -61,32 +65,40 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     // action, where it means "dimension not declared" and is reported as skipped. What each floor
     // gates, and how, is documented on its check function further down.
 
+    /** Task-level counterpart of [KotExtension.kotlinMetadataFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
     @get:Optional
     abstract val kotlinMetadataFloor: Property<String>
 
+    /** Task-level counterpart of [KotExtension.compileSdkFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
     @get:Optional
     abstract val compileSdkFloor: Property<Int>
 
+    /** Task-level counterpart of [KotExtension.agpFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
     @get:Optional
     abstract val agpFloor: Property<String>
 
+    /** Task-level counterpart of [KotExtension.jvmTargetFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
     @get:Optional
     abstract val jvmTargetFloor: Property<Int>
 
-    // Filled by the AGP wiring, one entry per matched release variant. More than one entry means
-    // a flavored library, where single-artifact wiring would silently verify only the last AAR;
-    // the action refuses that instead of reporting a partial truth.
+    /**
+     * Names of the release variants the AGP wiring matched, one entry per variant. More than
+     * one entry means a flavored library, where single-artifact wiring would verify only the
+     * last AAR; the task refuses that instead of reporting a partial truth.
+     */
     @get:Input
     @get:Optional
     abstract val wiredVariantNames: ListProperty<String>
 
-    // The measured emitted floors, written on every run that reads the artifact (pass or fail):
-    // the producer always gets to SEE the consumer bounds the artifact carries, and downstream
-    // tasks can consume the file as an input.
+    /**
+     * The measured emitted floors as a properties file, written on every run that reads the
+     * artifact, pass or fail: the producer always sees the consumer bounds the artifact
+     * carries, and downstream tasks can consume the file as an input.
+     */
     @get:OutputFile
     abstract val emittedFloorsReport: RegularFileProperty
 

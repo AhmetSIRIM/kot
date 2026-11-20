@@ -19,7 +19,7 @@ work exists.
 ## Conventions the build enforces
 
 - detekt gates style (its defaults plus the deviations in `config/detekt/detekt.yml`)
-- KDoc is a first-class artifact: `dokkaGenerate` fails on any warning
+- Every public class, function and property carries KDoc; detekt fails on a missing one
 - The functional tests double as the behavioral spec; a behavior change lands together with
   the test that pins it
 
