@@ -346,10 +346,10 @@ class ArtifactEdgeCaseFunctionalTest {
     }
 
     /**
-     * No AGP, no manual wiring: the task has nothing to verify and says so itself, naming both
-     * places an artifact can come from. The failure is the task's own rather than Gradle's
-     * generic input validation; the artifact is an optional input exactly so the action can
-     * explain a missing one. Pins the bare-JVM consumer experience.
+     * No Android or Java plugin, no manual wiring: the task has nothing to verify and says so
+     * itself, naming the places an artifact can come from. The failure is the task's own rather
+     * than Gradle's generic input validation; the artifact is an optional input exactly so the
+     * action can explain a missing one.
      */
     @Test
     fun `fails with its own message when no artifact is wired`() {
@@ -357,8 +357,8 @@ class ArtifactEdgeCaseFunctionalTest {
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain
-            "no artifact to verify: the Android library wiring supplied none, and none is set on the task."
+        result.output shouldContain "no artifact to verify: neither the Android library wiring nor the " +
+            "Java plugin wiring supplied one (a disabled jar task supplies none), and none is set on the task."
     }
 
     private fun runner(): GradleRunner = GradleRunner.create()

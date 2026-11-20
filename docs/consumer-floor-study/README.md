@@ -107,7 +107,7 @@ with the reason:
 | Status        | Entries | Meaning                                                |
 |---------------|---------|--------------------------------------------------------|
 | `aar`         | 96      | Measured.                                              |
-| `jar`         | 18      | Published as a plain JAR, which kot does not read yet. |
+| `jar`         | 18      | Published as a plain JAR, which kot 0.1.0 does not read. |
 | `excluded`    | 15      | Not a library, or not on a public Maven repository.    |
 | `not_checked` | 15      | Discontinued SDKs; no coordinate was looked up.        |
 | `unverified`  | 4       | No AAR or JAR was found at the coordinate tried.       |

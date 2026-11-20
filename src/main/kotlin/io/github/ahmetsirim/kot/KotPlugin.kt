@@ -10,8 +10,9 @@ import org.gradle.util.GradleVersion
  * Registers the `kot { }` block and the `verifyConsumerFloor` task.
  *
  * With the Android library plugin applied, the task joins `check`, and a library with a single
- * release variant gets that variant's AAR wired into the task. In every other case the task's
- * artifact is set by hand.
+ * release variant gets that variant's AAR wired into the task. With the Java plugin applied
+ * (the Java library and Kotlin JVM plugins apply it), the task joins `check` and reads the
+ * archive of the `jar` task. In every other case the task's artifact is set by hand.
  */
 class KotPlugin : Plugin<Project> {
 
@@ -44,6 +45,10 @@ class KotPlugin : Plugin<Project> {
         // AgpReleaseAarWiring, loaded only when this block runs.
         project.plugins.withId("com.android.library") {
             AgpReleaseAarWiring.wire(project = project, verifyTask = verifyTask, extension = extension)
+        }
+
+        project.plugins.withId("java") {
+            JavaJarWiring.wire(project = project, verifyTask = verifyTask, extension = extension)
         }
     }
 

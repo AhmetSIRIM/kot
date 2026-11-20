@@ -34,8 +34,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
 
     /**
      * The archive under verification. The AGP wiring supplies the release AAR of a library
-     * with a single release variant; a value set on the task wins over it. With no value the
-     * task fails.
+     * with a single release variant, and the Java plugin wiring supplies the archive of the
+     * `jar` task; a value set on the task wins over either. With no value the task fails.
      */
     @get:InputFile
     @get:Optional
@@ -163,7 +163,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
                     "silently skip the rest. Flavored libraries are not modeled yet. " +
                     "Set the task's artifact to the AAR to verify."
             } else {
-                "kot: no artifact to verify: the Android library wiring supplied none, and none is set on the task."
+                "kot: no artifact to verify: neither the Android library wiring nor the Java plugin wiring " +
+                    "supplied one (a disabled jar task supplies none), and none is set on the task."
             }
         )
     }
