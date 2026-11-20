@@ -27,3 +27,15 @@ work exists.
 
 - Commits are atomic; the subject names the change, the body carries the why and the trade-offs
 - The `summary` check must be green before a PR merges
+- A change that consumers can notice adds a line under `Unreleased` in `CHANGELOG.md`
+
+## Releasing
+
+`CHANGELOG.md` is the single source of release notes; the GitHub Release copies its section.
+
+1. Rename the `Unreleased` heading to `[X.Y.Z] - YYYY-MM-DD`, open a new empty `Unreleased`
+   above it, and update the link references at the bottom of the file.
+2. Merge that change, then push the tag `vX.Y.Z` from `main`.
+
+The tag starts the Publish workflow. It refuses a version without a changelog section before
+anything is published.

@@ -10,3 +10,4 @@
 
 - [ ] `./gradlew check` is green locally
 - [ ] Behavior changes land together with the test that pins them
+- [ ] A change that consumers can notice has a line under `Unreleased` in `CHANGELOG.md`

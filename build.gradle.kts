@@ -85,3 +85,34 @@ val functionalTestTask: TaskProvider<Test> = tasks.register<Test>("functionalTes
 tasks.check {
     dependsOn(functionalTestTask)
 }
+
+// The body of the GitHub Release: the CHANGELOG.md section of the version being built. Fails when
+// the changelog has no section for that version, so a release cannot go out without its entry.
+tasks.register("releaseNotes") {
+    group = "publishing"
+    description = "Writes the changelog section of the current version to build/release-notes.md."
+
+    val changelog: RegularFile = layout.projectDirectory.file("CHANGELOG.md")
+    val releaseNotes: Provider<RegularFile> = layout.buildDirectory.file("release-notes.md")
+    val versionName: String = project.version.toString()
+    inputs.file(changelog)
+    inputs.property("versionName", versionName)
+    outputs.file(releaseNotes)
+
+    doLast {
+        val lines: List<String> = changelog.asFile.readLines()
+        val headingIndex: Int = lines.indexOfFirst { line: String -> line.startsWith("## [$versionName]") }
+        if (headingIndex < 0) throw GradleException("CHANGELOG.md has no section for version $versionName.")
+
+        // A section ends at the next version heading or at the link references that close the file.
+        val linkReference = Regex("""^\[[^\]]+]: .*""")
+        val section: String = lines
+            .drop(headingIndex + 1)
+            .takeWhile { line: String -> !line.startsWith("## [") && !linkReference.matches(line) }
+            .joinToString(separator = "\n")
+            .trim()
+        if (section.isEmpty()) throw GradleException("The CHANGELOG.md section for version $versionName is empty.")
+
+        releaseNotes.get().asFile.writeText(section + "\n")
+    }
+}
