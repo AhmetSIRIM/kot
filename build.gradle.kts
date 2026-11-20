@@ -5,8 +5,7 @@ plugins {
 }
 
 group = "io.github.ahmetsirim" // Published coordinates: group:name:version; name comes from rootProject.name.
-// Tag-driven at release: the publish pipeline passes VERSION_NAME derived from the git tag
-// (and CI's Portal validation passes a fixed placeholder, since the Portal rejects -SNAPSHOT);
+// Tag-driven at release: the publish pipeline passes VERSION_NAME derived from the git tag;
 // local builds fall back to the development version.
 version = providers.gradleProperty("VERSION_NAME").getOrElse("0.1.0-SNAPSHOT")
 
