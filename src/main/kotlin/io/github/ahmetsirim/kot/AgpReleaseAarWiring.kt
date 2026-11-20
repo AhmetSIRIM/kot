@@ -32,8 +32,9 @@ internal object AgpReleaseAarWiring {
      * the file exists only after the AAR task runs at execution time.
      *
      * Release only, deliberately: the artifact a library publishes is the release AAR, so that is
-     * the floor worth gating. Flavored libraries (several release variants) are not modeled yet;
-     * with flavors, the last release variant AGP reports wins this wiring.
+     * the floor worth gating. Flavored libraries (several release variants) are not modeled yet:
+     * with more than one release variant the wiring supplies no AAR at all, and the consumer
+     * names the one to verify on the task.
      */
     fun wire(project: Project, verifyTask: TaskProvider<VerifyConsumerFloorTask>, extension: KotExtension) {
         val androidComponents: LibraryAndroidComponentsExtension = project
@@ -43,15 +44,27 @@ internal object AgpReleaseAarWiring {
             /* selector = */ androidComponents.selector().withBuildType("release"),
         ) { variant: LibraryVariant ->
             verifyTask.configure { task: VerifyConsumerFloorTask ->
-                // convention, not set: a consumer's explicit task-level artifact wins over the
-                // wiring, mirroring the floor properties' kot{}-vs-task precedence. With set()
-                // this callback would silently overwrite a hand-picked artifact, because
-                // onVariants fires after the consumer's script body has run.
-                task.artifact.convention(variant.artifacts.get(/* type = */ SingleArtifact.AAR))
-                // Feeds the multiple-release-variants guard in the task action; flavored
-                // libraries produce several release variants and only the last one's AAR
-                // would be verified (the roadmap models them properly later).
+                // Names the variants in the task's refusal when the wiring cannot choose.
                 task.wiredVariantNames.add(variant.name)
+
+                // A single release variant leaves nothing to choose: its AAR is the default.
+                // A further one makes the choice ambiguous, so the default is withdrawn (an
+                // unset property is a provider with no value) rather than left on whichever
+                // variant AGP reported last; verifying one flavor silently would read as
+                // coverage of all of them.
+                //
+                // convention, not set: a consumer's explicit task-level artifact wins over the
+                // wiring whenever it is set, mirroring the floor properties' kot{}-vs-task
+                // precedence. With set() this callback would silently overwrite a hand-picked
+                // artifact, because onVariants fires after the consumer's script body has run.
+                val isOnlyReleaseVariantSoFar: Boolean = task.wiredVariantNames.get().size == 1
+                task.artifact.convention(
+                    if (isOnlyReleaseVariantSoFar) {
+                        variant.artifacts.get(/* type = */ SingleArtifact.AAR)
+                    } else {
+                        project.objects.fileProperty()
+                    }
+                )
             }
 
             // The gate only earns its keep if it runs where consumers actually look: ./gradlew

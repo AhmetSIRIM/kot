@@ -93,9 +93,7 @@ class AgpWiringFunctionalTest {
 
     /**
      * A library whose release variant is disabled never wires an artifact, so its check must
-     * stay free of the gate instead of failing Gradle's input validation with a cryptic
-     * unset-property error. Born red from the round-2 review finding that the check attachment
-     * was unconditional while the wiring was not.
+     * stay free of the gate instead of failing on a task that has nothing to verify.
      */
     @Test
     fun `check excludes the gate when the release variant is disabled`() {
@@ -137,10 +135,11 @@ class AgpWiringFunctionalTest {
     }
 
     /**
-     * Flavored libraries produce several release variants, and the single-artifact wiring holds
-     * only the last one's AAR; a green run would silently cover one flavor while the others ship
-     * unverified. The gate must refuse loudly instead of reporting that partial truth. Proper
-     * per-variant modeling is a roadmap item; this pins the honest failure until it lands.
+     * Flavored libraries produce several release variants, and the wiring supplies none of
+     * their AARs: picking one would let a green run cover a single flavor while the others
+     * ship unverified. With no artifact named on the task, the gate refuses and names the
+     * variants. Proper per-variant modeling is a roadmap item; this pins the honest failure
+     * until it lands.
      */
     @Test
     fun `refuses a flavored library instead of verifying a single flavor silently`() {
@@ -161,6 +160,61 @@ class AgpWiringFunctionalTest {
 
         result.output shouldContain "2 release variants found (freeRelease, paidRelease)"
         result.output shouldContain "Flavored libraries are not modeled yet."
+    }
+
+    /**
+     * The refusal above guards the automatic wiring only. A flavored library whose author
+     * names the AAR to verify has resolved the ambiguity by hand, so the gate verifies that
+     * file instead of refusing; without this, a flavored library has no way to use the gate
+     * at all. The file name in the output proves which artifact was read.
+     */
+    @Test
+    fun `verifies a hand-picked artifact in a flavored library`() {
+        AarFixture.write(destination = File(projectDir, "handpicked.aar"), minCompileSdk = 29)
+        writeAndroidLibraryProject(
+            extraAndroidConfiguration = TWO_FLAVORS,
+            extraTaskConfiguration = """artifact.set(file("handpicked.aar"))""",
+        )
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("verifyConsumerFloor", "--configuration-cache")
+            .build()
+
+        result.task(":verifyConsumerFloor")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.output shouldContain "consumer floor check passed for handpicked.aar"
+        result.output shouldContain UNVERIFIED_SIBLINGS_NOTICE
+    }
+
+    /**
+     * The same choice made the way AGP offers it: the consumer's own onVariants callback hands
+     * one flavor's AAR to the task. That callback runs after the consumer's script body, so
+     * this pins that an artifact set on the task wins whenever it is set, not only when it is
+     * set early. The last-reported flavor is picked on purpose: a wiring that left its default
+     * on the first variant would verify the other AAR and fail here. The Provider carries the
+     * producing task, so the picked AAR is built first.
+     */
+    @Test
+    fun `verifies the AAR a flavored library picks through the Variants API`() {
+        writeAndroidLibraryProject(
+            extraAndroidConfiguration = TWO_FLAVORS,
+            extraAndroidComponentsConfiguration = """
+                onVariants(selector().withBuildType("release").withFlavor("tier" to "paid")) { variant ->
+                    tasks.named<VerifyConsumerFloorTask>("verifyConsumerFloor") {
+                        artifact.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.AAR))
+                    }
+                }
+            """.trimIndent(),
+        )
+
+        val result: BuildResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments("verifyConsumerFloor", "--configuration-cache")
+            .build()
+
+        result.task(":verifyConsumerFloor")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.output shouldContain "consumer floor check passed for consumer-paid-release.aar"
+        result.output shouldContain UNVERIFIED_SIBLINGS_NOTICE
     }
 
     private fun writeAndroidLibraryProject(
@@ -254,5 +308,18 @@ class AgpWiringFunctionalTest {
     private companion object {
         // Pinned deliberately: AGP 9.0.x bundles Kotlin 2.2.x, which stamps metadata 2.2 (asserted above).
         private const val AGP_VERSION = "9.0.1"
+
+        // A green run over one hand-picked AAR says out loud that the sibling variants were not verified.
+        private const val UNVERIFIED_SIBLINGS_NOTICE =
+            "2 release variants exist (freeRelease, paidRelease); only the artifact set on the task is verified"
+
+        // Two flavors in one dimension: AGP then reports the release variants freeRelease and paidRelease.
+        private val TWO_FLAVORS: String = """
+            flavorDimensions += "tier"
+            productFlavors {
+                create("free") { dimension = "tier" }
+                create("paid") { dimension = "tier" }
+            }
+        """.trimIndent()
     }
 }

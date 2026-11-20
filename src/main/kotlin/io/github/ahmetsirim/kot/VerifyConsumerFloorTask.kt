@@ -2,6 +2,7 @@ package io.github.ahmetsirim.kot
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -52,11 +53,17 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     //    and the task stays up-to-date.
     // NONE fits here because the verdict depends purely on what is inside the archive.
 
+    // @Optional here does not make the artifact optional for the gate. It only moves the "no
+    // value" failure from Gradle's input validation into the action, which can say why the
+    // value is missing (see resolveArtifact).
+
     /**
-     * The archive under verification. The AGP wiring supplies the release AAR; a value set on
-     * the task wins over it.
+     * The archive under verification. The AGP wiring supplies the release AAR of a library
+     * with a single release variant; a value set on the task wins over it. With no value the
+     * task fails.
      */
     @get:InputFile
+    @get:Optional
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val artifact: RegularFileProperty
 
@@ -86,9 +93,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     abstract val jvmTargetFloor: Property<Int>
 
     /**
-     * Names of the release variants the AGP wiring matched, one entry per variant. More than
-     * one entry means a flavored library, where single-artifact wiring would verify only the
-     * last AAR; the task refuses that instead of reporting a partial truth.
+     * Names of the release variants the AGP wiring saw, one entry per variant. More than one
+     * entry means a flavored library: the wiring then supplies no [artifact], and the task
+     * names these variants when it fails for lack of one.
      */
     @get:Input
     @get:Optional
@@ -121,10 +128,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      */
     @TaskAction
     fun verify() {
-        ensureSingleWiredVariant()
+        val aarFile: File = resolveArtifact()
         ensureAtLeastOneFloorIsDeclared()
 
-        val aarFile: File = artifact.get().asFile
         val emittedFloors: EmittedFloors = EmittedFloorReader.read(aarFile = aarFile)
         writeEmittedFloorsReport(emittedFloors = emittedFloors)
 
@@ -163,20 +169,38 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Refuses to verify a flavored library: with several release variants the single-artifact
-     * wiring holds only the LAST variant's AAR, so a green run would silently cover one flavor
-     * while the others ship unverified. A partial truth reads as coverage, so it fails instead;
-     * proper per-variant modeling is a roadmap item.
+     * Returns the archive to verify, or fails saying why there is none.
+     *
+     * A flavored library has several release variants, and the wiring supplies none of their
+     * AARs: picking one would let a green run cover a single flavor while the others ship
+     * unverified, and a partial truth reads as coverage. The author names the AAR on the task
+     * instead; proper per-variant modeling is a roadmap item. A value set on the task is used
+     * as it is, however many variants exist, and the run says that the other variants were
+     * not verified: a green run over one flavor must not read as coverage of all of them.
      */
-    private fun ensureSingleWiredVariant() {
+    private fun resolveArtifact(): File {
         val wired: List<String> = wiredVariantNames.getOrElse(emptyList())
-        if (wired.size > 1) {
-            throw GradleException(
-                "kot: ${wired.size} release variants found (${wired.joinToString(separator = ", ")}); " +
-                    "the single-artifact wiring would verify only '${wired.last()}' and silently skip the rest. " +
-                    "Flavored libraries are not modeled yet."
-            )
+        val wiredNames: String = wired.joinToString(separator = ", ")
+
+        artifact.orNull?.let { archive: RegularFile ->
+            if (wired.size > 1) {
+                logger.lifecycle(
+                    "kot: ${wired.size} release variants exist ($wiredNames); only the artifact set on the task is verified."
+                )
+            }
+            return archive.asFile
         }
+
+        throw GradleException(
+            if (wired.size > 1) {
+                "kot: ${wired.size} release variants found ($wiredNames); " +
+                    "the wiring does not pick one of their AARs, because verifying a single flavor would " +
+                    "silently skip the rest. Flavored libraries are not modeled yet. " +
+                    "Set the task's artifact to the AAR to verify."
+            } else {
+                "kot: no artifact to verify: the Android library wiring supplied none, and none is set on the task."
+            }
+        )
     }
 
     /**

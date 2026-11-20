@@ -172,16 +172,18 @@ class ArtifactEdgeCaseFunctionalTest {
     }
 
     /**
-     * No AGP, no manual wiring: Gradle's own input validation refuses the unset @InputFile
-     * before the action ever runs, naming the property. Pins the bare-JVM consumer experience.
+     * No AGP, no manual wiring: the task has nothing to verify and says so itself, naming both
+     * places an artifact can come from. The failure is the task's own rather than Gradle's
+     * generic input validation; the artifact is an optional input exactly so the action can
+     * explain a missing one. Pins the bare-JVM consumer experience.
      */
     @Test
-    fun `fails input validation when no artifact is wired`() {
+    fun `fails with its own message when no artifact is wired`() {
         writeConsumerBuild("""kot { kotlinMetadataFloor.set("2.2") }""", wireArtifact = false)
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain "property 'artifact' doesn't have a configured value"
+        result.output shouldContain "no artifact to verify: the Android library wiring supplied none, and none is set on the task."
     }
 
     private fun runner(): GradleRunner = GradleRunner.create()
