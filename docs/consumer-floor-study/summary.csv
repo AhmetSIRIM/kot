@@ -1,0 +1,97 @@
+sdk,owner,coordinate,versions,oldest_version,newest_version,kotlin_metadata_oldest,kotlin_metadata_newest,kotlin_metadata_rose,kotlin_metadata_rose_within_major,bytecode_oldest,bytecode_newest,bytecode_rose,bytecode_rose_within_major,min_compile_sdk_oldest,min_compile_sdk_newest,min_compile_sdk_rose,min_compile_sdk_rose_within_major,min_agp_oldest,min_agp_newest,min_agp_rose,min_agp_rose_within_major
+Android Jetpack core,AndroidX,androidx.core:core,15,1.0.2,1.19.1,1.8,2.1,true,true,51,55,true,true,1,37,true,true,1.0.0,9.1.0,true,true
+Android Architecture Components,AndroidX,androidx.lifecycle:lifecycle-runtime,12,2.0.0,2.11.1,1.8,2.1,true,true,51,55,true,true,31,34,true,true,1.0.0,8.1.1,true,true
+Android Jetpack VersionedParcelable,AndroidX,androidx.versionedparcelable:versionedparcelable,3,1.0.0,1.2.1,,,,,51,52,true,true,34,34,false,false,1.0.0,1.0.0,false,false
+Android Jetpack Widgets,AndroidX,androidx.recyclerview:recyclerview,5,1.0.0,1.4.0,,,,,51,52,true,true,33,35,true,true,1.0.0,1.0.0,false,false
+Firebase,Google,com.google.firebase:firebase-common,15,9.0.2,23.0.0,1.7,2.1,true,false,51,52,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+Android Jetpack AppCompat,AndroidX,androidx.appcompat:appcompat,9,1.0.2,1.8.0,2.1,2.1,false,false,51,55,true,true,31,34,true,true,1.0.0,8.1.1,true,true
+AndroidX Activity,AndroidX,androidx.activity:activity,14,1.0.0,1.13.0,1.5,2.1,true,true,51,52,true,true,30,36,true,true,1.0.0,8.9.1,true,true
+AndroidX App Startup,AndroidX,androidx.startup:startup-runtime,3,1.0.0,1.2.0,,,,,51,52,true,true,31,34,true,true,1.0.0,1.0.0,false,false
+Android Activity Saved State,AndroidX,androidx.savedstate:savedstate,6,1.0.0,1.5.0,1.8,2.1,true,true,51,52,true,true,33,34,true,true,1.0.0,8.1.1,true,true
+AndroidX Loader,AndroidX,androidx.loader:loader,3,1.0.0,1.2.0,2.1,2.1,false,false,51,55,true,true,35,35,false,false,8.6.0,8.6.0,false,false
+Google Cloud Messaging (GCM),Google,com.google.android.gms:play-services-gcm,15,7.0.0,17.0.0,,,,,51,51,false,false,,,,,,,,
+Android Jetpack Media,AndroidX,androidx.media:media,9,1.0.1,1.8.0,,,,,51,52,true,true,30,34,true,true,1.0.0,8.1.1,true,true
+AndroidX Emoji / Emoji2,AndroidX,androidx.emoji2:emoji2,8,1.0.1,1.7.0,,,,,52,55,true,true,31,34,true,true,1.0.0,8.1.1,true,true
+Android Transition Support Library,AndroidX,androidx.transition:transition,8,1.0.1,1.7.2,,,,,51,52,true,true,34,35,true,true,1.0.0,8.6.0,true,true
+Android WorkManager,AndroidX,androidx.work:work-runtime,13,2.0.1,2.12.0,1.4,2.1,true,true,51,55,true,true,30,35,true,true,1.0.0,8.6.0,true,true
+AndroidX ProfileInstaller,AndroidX,androidx.profileinstaller:profileinstaller,5,1.0.4,1.4.1,,,,,52,52,false,false,30,34,true,true,1.0.0,1.0.0,false,false
+Android Support VectorDrawable,AndroidX,androidx.vectordrawable:vectordrawable,3,1.0.1,1.2.0,,,,,51,52,true,true,34,34,false,false,1.0.0,1.0.0,false,false
+AndroidX Legacy: Support Library core utils,AndroidX,androidx.legacy:legacy-support-core-utils,1,1.0.0,1.0.0,,,,,51,51,false,false,,,,,,,,
+AndroidX Cursor Adapter,AndroidX,androidx.cursoradapter:cursoradapter,1,1.0.0,1.0.0,,,,,51,51,false,false,,,,,,,,
+AndroidX Local Broadcast Manager,AndroidX,androidx.localbroadcastmanager:localbroadcastmanager,2,1.0.0,1.1.0,,,,,51,52,true,true,31,31,false,false,1.0.0,1.0.0,false,false
+AdMob,Google,com.google.android.gms:play-services-ads,15,6.5.87,25.5.0,,,,,51,52,true,true,,,,,,,,
+Android Support Library Print,AndroidX,androidx.print:print,2,1.0.0,1.1.0,,,,,51,52,true,true,34,34,false,false,8.1.1,8.1.1,false,false
+Android Support Library Document File,AndroidX,androidx.documentfile:documentfile,2,1.0.1,1.1.0,,,,,51,52,true,true,34,34,false,false,8.1.1,8.1.1,false,false
+AndroidX Widget ViewPager2,AndroidX,androidx.viewpager2:viewpager2,2,1.0.0,1.1.0,,,,,51,52,true,true,34,34,false,false,1.0.0,1.0.0,false,false
+AndroidX Tracing,AndroidX,androidx.tracing:tracing,5,1.0.0,2.0.5,2.0,2.1,true,false,52,55,true,false,31,34,true,true,1.0.0,8.1.1,true,false
+Jetpack DataStore,AndroidX,androidx.datastore:datastore,4,1.0.0,1.3.0,1.5,2.2,true,true,52,55,true,true,30,34,true,true,1.0.0,8.1.1,true,true
+AndroidX Legacy: Support Library core UI,AndroidX,androidx.legacy:legacy-support-core-ui,1,1.0.0,1.0.0,,,,,51,51,false,false,,,,,,,,
+AndroidX WebKit,AndroidX,androidx.webkit:webkit,15,1.0.0,1.18.0,,,,,51,55,true,true,32,33,true,true,1.0.0,7.2.0,true,true
+Glide,other,com.github.bumptech.glide:glide,11,4.1.1,5.0.10,,,,,51,52,true,false,1,37,true,false,1.0.0,1.0.0,false,false
+AndroidX SQLite,AndroidX,androidx.sqlite:sqlite,8,2.0.1,2.7.1,1.7,2.1,true,true,51,55,true,true,31,34,true,true,1.0.0,8.1.1,true,true
+Android Support Library Async Layout Inflater,AndroidX,androidx.asynclayoutinflater:asynclayoutinflater,2,1.0.0,1.1.0,,,,,51,52,true,true,34,34,false,false,8.1.1,8.1.1,false,false
+AndroidX ExifInterface,AndroidX,androidx.exifinterface:exifinterface,5,1.0.0,1.4.2,,,,,51,52,true,true,34,34,false,false,1.0.0,1.0.0,false,false
+Jetpack WindowManager,AndroidX,androidx.window:window,6,1.0.0,1.5.1,1.6,2.0,true,true,52,52,false,false,31,34,true,true,1.0.0,8.1.1,true,true
+AndroidX DynamicAnimation,AndroidX,androidx.dynamicanimation:dynamicanimation,2,1.0.0,1.1.0,,,,,51,52,true,true,34,34,false,false,8.1.1,8.1.1,false,false
+AndroidX Preference,AndroidX,androidx.preference:preference,3,1.0.0,1.2.1,1.6,1.6,false,false,51,52,true,true,31,31,false,false,1.0.0,1.0.0,false,false
+AndroidX Multi-Dex Library,AndroidX,androidx.multidex:multidex,1,2.0.1,2.0.1,,,,,51,51,false,false,,,,,,,,
+Jetpack Compose,AndroidX,androidx.compose.ui:ui,14,1.0.5,1.13.0,1.5,2.2,true,true,52,55,true,true,30,37,true,true,1.0.0,9.1.0,true,true
+Facebook,other,com.facebook.android:facebook-core,15,4.27.0,19.0.1,1.5,1.8,true,false,51,52,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+AndroidX Graphics,AndroidX,androidx.graphics:graphics-core,1,1.0.4,1.0.4,1.8,1.8,false,false,52,52,false,false,34,34,false,false,1.0.0,1.0.0,false,false
+AndroidX Media3 (ExoPlayer),AndroidX,androidx.media3:media3-exoplayer,12,1.0.2,1.11.1,,,,,52,52,false,false,33,36,true,true,1.0.0,1.0.0,false,false
+Facebook Audience Network,other,com.facebook.android:audience-network-sdk,7,4.10.1,6.22.1,,,,,51,52,true,false,,,,,,,,
+Lottie,other,com.airbnb.android:lottie,15,0.9.16,6.7.1,,,,,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Unity Ads,other,com.unity3d.ads:unity-ads,15,3.7.5,4.22.0,1.4,2.1,true,true,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+AppLovin,other,com.applovin:applovin-sdk,15,9.14.13,13.7.0,1.9,1.9,false,false,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+AndroidX Autofill,AndroidX,androidx.autofill:autofill,3,1.0.0,1.3.0,,,,,52,52,false,false,34,34,false,false,1.0.0,1.0.0,false,false
+Coil,other,io.coil-kt.coil3:coil-core-android,7,3.0.4,3.6.3,2.0,2.2,true,true,52,55,true,true,1,37,true,true,1.0.0,1.0.0,false,false
+Pangle,other,com.pangle.global:ads-sdk,15,5.0.1.5,6.5.1.2,,,,,52,52,false,false,,,,,,,,
+Ironsource,other,com.ironsource.sdk:mediationsdk,11,6.16.2,9.2.0,1.1,1.8,true,true,51,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Mintegral,other,com.mbridge.msdk.oversea:reward,14,15.4.71,16.8.61,,,,,51,52,true,true,,,,,,,,
+AppsFlyer,other,com.appsflyer:af-android-sdk,15,4.3.8,7.0.4,1.6,2.0,true,true,51,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+TikTok open SDK,other,com.bytedance.ies.ugc.aweme:opensdk-oversea-external,3,0.0.2.0,0.2.1.2,,,,,51,51,false,false,,,,,,,,
+InMobi,other,com.inmobi.monetization:inmobi-ads-kotlin,10,10.5.9,11.5.1,1.5,2.1,true,true,52,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Adjust,other,com.adjust.sdk:adjust-android,6,4.31.1,5.8.1,,,,,52,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Digital Turbine,other,com.fyber:marketplace-sdk,6,8.0.0,8.5.1,,,,,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Google Play Games Services,Google,com.google.android.gms:play-services-games-v2,7,17.0.0,22.1.0,,,,,51,52,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+Moloco,other,com.moloco.sdk:moloco-sdk,15,0.7.1,4.14.1,1.7,2.0,true,false,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+Chartboost,other,com.chartboost:chartboost-sdk,12,9.3.1,9.14.1,1.7,2.1,true,true,52,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+BigoAds,other,com.bigossp:bigo-ads,15,1.0.9,6.2.0,,,,,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+BidMachine,other,io.bidmachine:ads,15,1.0.2,4.0.0,1.7,1.7,false,false,51,52,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+Yandex Mobile Ads,other,com.yandex.android:mobileads,15,2.00,8.6.0,1.5,2.0,true,true,51,55,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+Amazon Mobile Ads,other,com.amazon.android:aps-sdk,15,9.2.2,12.0.5,1.6,2.1,true,false,52,55,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+AdColony,other,com.adcolony:sdk,5,4.4.1,4.8.2,,,,,51,51,false,false,1,1,false,false,,,,
+PubNative,other,net.pubnative:hybid.sdk,15,0.11.7,3.10.0,1.5,1.8,true,true,52,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Vungle,other,com.vungle:vungle-ads,8,7.0.0,7.8.0,1.7,1.7,false,false,55,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+Startapp,other,com.startapp:inapp-sdk,10,4.8.11,5.5.1,2.0,2.4,true,true,52,52,true,true,1,36,true,true,1.0.0,1.0.0,false,false
+Ogury,other,co.ogury:ogury-sdk,15,4.3.13,6.4.0,1.8,2.2,true,true,51,61,true,true,1,35,true,true,1.0.0,1.0.0,false,false
+Singular,other,com.singular.sdk:singular_sdk,15,9.6.0,12.17.0,1.8,1.8,false,false,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Tapjoy,other,com.tapjoy:tapjoy-android-sdk,15,11.6.0,14.9.0,1.9,2.2,true,true,51,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+MyTarget,other,com.my.target:mytarget-sdk,15,5.11.12,5.52.5,,,,,51,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+PubMatic,other,com.pubmatic.sdk:openwrap,15,1.5.1,5.6.0,,,,,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+MobileFuse,other,com.mobilefuse.sdk:mobilefuse-sdk-core,15,0.1.18,1.13.1,1.4,1.4,false,false,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+MoPub,other,com.mopub:mopub-sdk-base,11,5.8.0,5.18.0,1.1,1.4,true,true,51,52,true,true,,,,,,,,
+Kakao,other,com.kakao.sdk:v2-common,15,2.0.6,2.26.0,1.1,1.8,true,true,52,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Tenjin,other,com.tenjin:android-sdk,14,1.12.24,2.0.2,1.7,1.9,true,true,52,55,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+Appodeal,other,com.appodeal.ads:sdk,15,1.1.1.0,3.12.0.1,,,,,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+LINE SDK,other,com.linecorp.linesdk:linesdk,8,5.6.2,5.13.0,1.1,1.7,true,true,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+HyprMX,other,com.hyprmx.android:HyprMX-SDK,6,4.3.1,6.4.7,1.1,2.2,true,true,51,52,true,true,1,35,true,true,1.0.0,1.0.0,false,false
+Taboola,other,com.taboola:android-sdk,15,2.0.29,4.1.3,1.8,1.8,false,false,51,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+AppBrain SDK,other,com.appbrain:appbrain-sdk,2,18.10,18.20,,,,,61,61,false,false,34,34,false,false,1.0.0,1.0.0,false,false
+AppNext,other,com.appnext.sdk:ads,8,2.0.6.462,2.7.6.473,,,,,51,55,true,true,1,1,false,false,,,,
+Kochava,other,com.kochava.tracker:tracker,12,4.0.0,5.7.1,,,,,51,52,true,false,1,1,false,false,1.0.0,1.0.0,false,false
+Criteo,other,com.criteo.publisher:criteo-publisher-sdk,10,4.4.0,7.1.0,1.1,1.7,true,true,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+VKontakte SDK,other,com.vk:android-sdk-core,8,3.0.0,4.1.0,1.4,1.8,true,true,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+TappX,other,com.tappx.sdk.android:tappx-sdk,6,3.0.12,4.2.1,,,,,51,55,true,true,1,35,true,true,1.0.0,1.0.0,false,false
+AppNexus,other,com.appnexus.opensdk:appnexus-sdk,15,1.21,9.15.0,,,,,49,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+WeChat,other,com.tencent.mm.opensdk:wechat-sdk-android,2,6.6.4,6.8.40,,,,,51,51,false,false,,,,,,,,
+Snap Creative Kit,other,com.snap.creativekit:creativekit,3,2.0.0,3.0.0,,,,,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+Snap Login Kit,other,com.snap.loginkit:loginkit,3,2.0.0,3.0.0,,,,,52,52,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+Android GIF Drawable,other,pl.droidsonroids.gif:android-gif-drawable,3,1.0.12,1.2.32,,,,,51,52,true,true,1,1,false,false,1.0.0,1.0.0,false,false
+AndroidX Biometric,AndroidX,androidx.biometric:biometric,2,1.0.1,1.1.0,,,,,51,51,false,false,,,,,,,,
+AndroidX Credentials,AndroidX,androidx.credentials:credentials,4,1.2.2,1.6.0,1.8,2.1,true,true,52,52,false,false,34,35,true,true,1.0.0,8.6.0,true,true
+AndroidX MediaRouter,AndroidX,androidx.mediarouter:mediarouter,9,1.0.0,1.9.0,,,,,51,55,true,true,31,37,true,true,1.0.0,9.1.0,true,true
+CameraX,AndroidX,androidx.camera:camera-core,8,1.0.2,1.7.0,1.8,2.2,true,true,52,55,true,true,31,36,true,true,1.0.0,8.9.1,true,true
+Google Maps SDK,Google,com.google.android.gms:play-services-maps,15,6.5.87,20.1.0,,,,,51,51,false,false,1,1,false,false,1.0.0,1.0.0,false,false
+Jetpack Navigation,AndroidX,androidx.navigation:navigation-runtime,11,2.0.0,2.10.2,1.6,2.1,true,true,51,55,true,true,31,34,true,true,1.0.0,8.1.1,true,true
+Litho,other,com.facebook.litho:litho-core,15,0.1.0,0.50.2,1.8,1.9,true,true,51,61,true,true,1,1,false,false,1.0.0,1.0.0,false,false

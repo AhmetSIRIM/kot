@@ -35,6 +35,12 @@ observe the floors the new toolchain stamps. Merge it and your consumers' window
 nobody deciding that. kot turns that narrowing into a red build, so widening the floor goes
 back to being a decision.
 
+Floor rises can be measured. A [study of 96 widely used Android SDKs](docs/consumer-floor-study/README.md),
+measured on 20 November 2026, found that 19 of the 29 SDKs outside AndroidX that carry Kotlin
+metadata raised its version without a new major version, and that all 45 outside AndroidX
+that record an AGP floor carry AGP's default, not a declared one. Of five release notes read, two
+announce a Kotlin upgrade and none states a minimum Kotlin version for the integrating app.
+
 kot opens the built AAR and verifies what was actually **emitted**, not what was configured:
 
 | Dimension                       | Emitted where                              | Check               |

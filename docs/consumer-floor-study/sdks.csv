@@ -1,0 +1,149 @@
+sdk,appbrain_share_of_apps_percent,status,repository,coordinate,note
+Android Jetpack core,94.16,aar,https://dl.google.com/dl/android/maven2,androidx.core:core,
+Android Architecture Components,90.19,aar,https://dl.google.com/dl/android/maven2,androidx.lifecycle:lifecycle-runtime,
+PairIP,86.64,excluded,,,not a published library (Play app protection)
+Android Jetpack VersionedParcelable,85.94,aar,https://dl.google.com/dl/android/maven2,androidx.versionedparcelable:versionedparcelable,
+Android Jetpack Annotations,81.87,jar,https://dl.google.com/dl/android/maven2,androidx.annotation:annotation,
+Android Jetpack Widgets,80.67,aar,https://dl.google.com/dl/android/maven2,androidx.recyclerview:recyclerview,
+Firebase,78.03,aar,https://dl.google.com/dl/android/maven2,com.google.firebase:firebase-common,
+Android Jetpack AppCompat,76.61,aar,https://dl.google.com/dl/android/maven2,androidx.appcompat:appcompat,
+AndroidX Activity,65.29,aar,https://dl.google.com/dl/android/maven2,androidx.activity:activity,
+AndroidX App Startup,63.47,aar,https://dl.google.com/dl/android/maven2,androidx.startup:startup-runtime,
+Kotlin,59.84,jar,https://repo1.maven.org/maven2,org.jetbrains.kotlin:kotlin-stdlib,
+Android Activity Saved State,59.47,aar,https://dl.google.com/dl/android/maven2,androidx.savedstate:savedstate,
+AndroidX Loader,55.38,aar,https://dl.google.com/dl/android/maven2,androidx.loader:loader,
+Google Cloud Messaging (GCM),55.32,aar,https://dl.google.com/dl/android/maven2,com.google.android.gms:play-services-gcm,
+Android Jetpack Media,55.16,aar,https://dl.google.com/dl/android/maven2,androidx.media:media,
+AndroidX Emoji / Emoji2,52.29,aar,https://dl.google.com/dl/android/maven2,androidx.emoji2:emoji2,
+Android Transition Support Library,51.35,aar,https://dl.google.com/dl/android/maven2,androidx.transition:transition,
+Android WorkManager,50.59,aar,https://dl.google.com/dl/android/maven2,androidx.work:work-runtime,
+AndroidX ProfileInstaller,50.58,aar,https://dl.google.com/dl/android/maven2,androidx.profileinstaller:profileinstaller,
+Android Support Library collections,49.92,jar,https://dl.google.com/dl/android/maven2,androidx.collection:collection,
+Android Support VectorDrawable,48.98,aar,https://dl.google.com/dl/android/maven2,androidx.vectordrawable:vectordrawable,
+Google gson,46.25,jar,https://repo1.maven.org/maven2,com.google.code.gson:gson,
+AndroidX Legacy: Support Library core utils,45.22,aar,https://dl.google.com/dl/android/maven2,androidx.legacy:legacy-support-core-utils,
+AndroidX Cursor Adapter,44.73,aar,https://dl.google.com/dl/android/maven2,androidx.cursoradapter:cursoradapter,
+AndroidX Local Broadcast Manager,43.84,aar,https://dl.google.com/dl/android/maven2,androidx.localbroadcastmanager:localbroadcastmanager,
+AndroidX Concurrent Futures,42.44,jar,https://dl.google.com/dl/android/maven2,androidx.concurrent:concurrent-futures,
+AdMob,42.40,aar,https://dl.google.com/dl/android/maven2,com.google.android.gms:play-services-ads,
+Android Support Library Print,41.44,aar,https://dl.google.com/dl/android/maven2,androidx.print:print,
+Chromium,41.11,excluded,,,not a library (browser engine code)
+Android Support Library Document File,40.79,aar,https://dl.google.com/dl/android/maven2,androidx.documentfile:documentfile,
+AndroidX Widget ViewPager2,40.31,aar,https://dl.google.com/dl/android/maven2,androidx.viewpager2:viewpager2,
+JetBrains Annotations,39.60,jar,https://repo1.maven.org/maven2,org.jetbrains:annotations,
+Okio,37.62,jar,https://repo1.maven.org/maven2,com.squareup.okio:okio,
+AndroidX Tracing,36.42,aar,https://dl.google.com/dl/android/maven2,androidx.tracing:tracing,
+Jetpack DataStore,35.92,aar,https://dl.google.com/dl/android/maven2,androidx.datastore:datastore,
+AndroidX Legacy: Support Library core UI,34.86,aar,https://dl.google.com/dl/android/maven2,androidx.legacy:legacy-support-core-ui,
+IntelliJ IDEA,34.56,excluded,,,not a library (IDE)
+AndroidX WebKit,34.38,aar,https://dl.google.com/dl/android/maven2,androidx.webkit:webkit,
+Glide,32.27,aar,https://repo1.maven.org/maven2,com.github.bumptech.glide:glide,
+AndroidX SQLite,32.07,aar,https://dl.google.com/dl/android/maven2,androidx.sqlite:sqlite,
+Android Support Library Async Layout Inflater,30.63,aar,https://dl.google.com/dl/android/maven2,androidx.asynclayoutinflater:asynclayoutinflater,
+AndroidX ExifInterface,28.61,aar,https://dl.google.com/dl/android/maven2,androidx.exifinterface:exifinterface,
+Google Guava,26.77,jar,https://repo1.maven.org/maven2,com.google.guava:guava,
+Jetpack WindowManager,26.48,aar,https://dl.google.com/dl/android/maven2,androidx.window:window,
+AndroidX DynamicAnimation,24.88,aar,https://dl.google.com/dl/android/maven2,androidx.dynamicanimation:dynamicanimation,
+Google Protocol Buffers,24.34,jar,https://repo1.maven.org/maven2,com.google.protobuf:protobuf-javalite,
+AndroidX Inspection,24.27,unverified,,androidx.inspection:inspection,no AAR or JAR found at the coordinate tried
+AndroidX Resource Inspection,24.05,jar,https://dl.google.com/dl/android/maven2,androidx.resourceinspection:resourceinspection-annotation,
+AndroidX Preference,22.73,aar,https://dl.google.com/dl/android/maven2,androidx.preference:preference,
+AndroidX Multi-Dex Library,22.42,aar,https://dl.google.com/dl/android/maven2,androidx.multidex:multidex,
+AndroidX Privacy Sandbox,22.25,unverified,,androidx.privacysandbox.ads:ads-adservices,no AAR or JAR found at the coordinate tried
+Kotlinx Serialization,21.77,jar,https://repo1.maven.org/maven2,org.jetbrains.kotlinx:kotlinx-serialization-core,
+Jetpack Compose,20.52,aar,https://dl.google.com/dl/android/maven2,androidx.compose.ui:ui,
+ByteDance APM Insight,20.34,excluded,,,no public Maven coordinate known
+Facebook,19.26,aar,https://repo1.maven.org/maven2,com.facebook.android:facebook-core,
+AndroidX Graphics,17.20,aar,https://dl.google.com/dl/android/maven2,androidx.graphics:graphics-core,
+AndroidX Media3 (ExoPlayer),16.80,aar,https://dl.google.com/dl/android/maven2,androidx.media3:media3-exoplayer,
+Facebook Audience Network,16.62,aar,https://repo1.maven.org/maven2,com.facebook.android:audience-network-sdk,
+Open Measurement,16.25,excluded,,,not on a public Maven repository
+Lottie,14.92,aar,https://repo1.maven.org/maven2,com.airbnb.android:lottie,
+Unity Ads,13.53,aar,https://repo1.maven.org/maven2,com.unity3d.ads:unity-ads,
+AppLovin,12.44,aar,https://repo1.maven.org/maven2,com.applovin:applovin-sdk,
+AndroidX Autofill,11.91,aar,https://dl.google.com/dl/android/maven2,androidx.autofill:autofill,
+Coil,11.89,aar,https://repo1.maven.org/maven2,io.coil-kt.coil3:coil-core-android,
+Pangle,8.81,aar,https://artifact.bytedance.com/repository/pangle,com.pangle.global:ads-sdk,
+Ironsource,8.41,aar,https://android-sdk.is.com,com.ironsource.sdk:mediationsdk,
+Mintegral,8.37,aar,https://dl-maven-android.mintegral.com/repository/mbridge_android_sdk_oversea,com.mbridge.msdk.oversea:reward,
+AppsFlyer,8.26,aar,https://repo1.maven.org/maven2,com.appsflyer:af-android-sdk,
+TikTok open SDK,7.35,aar,https://artifact.bytedance.com/repository/AwemeOpenSDK,com.bytedance.ies.ugc.aweme:opensdk-oversea-external,
+InMobi,7.06,aar,https://repo1.maven.org/maven2,com.inmobi.monetization:inmobi-ads-kotlin,
+Adjust,5.86,aar,https://repo1.maven.org/maven2,com.adjust.sdk:adjust-android,
+Digital Turbine,5.15,aar,https://repo1.maven.org/maven2,com.fyber:marketplace-sdk,
+Google Play Games Services,4.54,aar,https://dl.google.com/dl/android/maven2,com.google.android.gms:play-services-games-v2,
+Moloco,3.58,aar,https://repo1.maven.org/maven2,com.moloco.sdk:moloco-sdk,
+Chartboost,3.52,aar,https://cboost.jfrog.io/artifactory/chartboost-ads,com.chartboost:chartboost-sdk,
+BigoAds,3.41,aar,https://repo1.maven.org/maven2,com.bigossp:bigo-ads,
+Explorestack,3.36,excluded,,,no public Maven coordinate known
+BidMachine,3.28,aar,https://artifactory.bidmachine.io/bidmachine,io.bidmachine:ads,
+SafeDK,3.28,excluded,,,injected by a build plugin; not a library dependency
+Yandex Mobile Ads,3.27,aar,https://repo1.maven.org/maven2,com.yandex.android:mobileads,
+Amazon Mobile Ads,2.22,aar,https://repo1.maven.org/maven2,com.amazon.android:aps-sdk,
+AdColony,1.93,aar,https://repo1.maven.org/maven2,com.adcolony:sdk,
+PubNative,1.57,aar,https://verve.jfrog.io/artifactory/verve-gradle-release,net.pubnative:hybid.sdk,
+Vungle,1.50,aar,https://repo1.maven.org/maven2,com.vungle:vungle-ads,
+Startapp,1.28,aar,https://repo1.maven.org/maven2,com.startapp:inapp-sdk,
+Ogury,1.21,aar,https://maven.ogury.co,co.ogury:ogury-sdk,
+Singular,1.15,aar,https://maven.singular.net,com.singular.sdk:singular_sdk,
+Tapjoy,1.13,aar,https://sdk.tapjoy.com,com.tapjoy:tapjoy-android-sdk,
+MyTarget,1.06,aar,https://repo1.maven.org/maven2,com.my.target:mytarget-sdk,
+PubMatic,1.06,aar,https://repo.pubmatic.com/artifactory/public-repos,com.pubmatic.sdk:openwrap,
+Twitter Kit,0.95,unverified,,com.twitter.sdk.android:twitter-core,no AAR or JAR found at the coordinate tried
+MobileFuse,0.80,aar,https://repo1.maven.org/maven2,com.mobilefuse.sdk:mobilefuse-sdk-core,
+MoPub,0.70,aar,https://repo1.maven.org/maven2,com.mopub:mopub-sdk-base,
+Kakao,0.66,aar,https://devrepo.kakao.com/nexus/content/groups/public,com.kakao.sdk:v2-common,
+Tenjin,0.64,aar,https://repo1.maven.org/maven2,com.tenjin:android-sdk,
+Appodeal,0.52,aar,https://artifactory.appodeal.com/appodeal,com.appodeal.ads:sdk,
+LINE SDK,0.43,aar,https://repo1.maven.org/maven2,com.linecorp.linesdk:linesdk,
+Integral Ad Science,0.41,excluded,,,no public Maven coordinate known
+HyprMX,0.35,aar,https://repo1.maven.org/maven2,com.hyprmx.android:HyprMX-SDK,
+Taboola,0.31,aar,https://taboolapublic.jfrog.io/artifactory/mobile-release,com.taboola:android-sdk,
+AppBrain SDK,0.30,aar,https://repo1.maven.org/maven2,com.appbrain:appbrain-sdk,
+AppNext,0.30,aar,https://dl.appnext.com,com.appnext.sdk:ads,
+Kochava,0.30,aar,https://repo1.maven.org/maven2,com.kochava.tracker:tracker,
+Criteo,0.25,aar,https://repo1.maven.org/maven2,com.criteo.publisher:criteo-publisher-sdk,
+VKontakte SDK,0.23,aar,https://repo1.maven.org/maven2,com.vk:android-sdk-core,
+Nielsen,0.18,excluded,,,no public Maven coordinate known
+Smack API,0.18,jar,https://repo1.maven.org/maven2,org.igniterealtime.smack:smack-android,
+AwesomeAds,0.17,excluded,,,no public Maven coordinate known
+Kidoz,0.12,excluded,,,no public Maven coordinate known
+Outbrain,0.11,excluded,,,no public Maven coordinate known
+TappX,0.11,aar,https://repo1.maven.org/maven2,com.tappx.sdk.android:tappx-sdk,
+TNK,0.10,excluded,,,no public Maven coordinate known
+adMost,0.08,excluded,,,no public Maven coordinate known
+AppNexus,0.07,aar,https://repo1.maven.org/maven2,com.appnexus.opensdk:appnexus-sdk,
+Digits for Android,0.06,not_checked,,,discontinued or no public Maven coordinate looked up
+WeChat,0.06,aar,https://repo1.maven.org/maven2,com.tencent.mm.opensdk:wechat-sdk-android,
+HeyZap,0.05,not_checked,,,discontinued or no public Maven coordinate looked up
+Twitter4j,0.05,jar,https://repo1.maven.org/maven2,org.twitter4j:twitter4j-core,
+MobileAppTracking,0.03,not_checked,,,discontinued or no public Maven coordinate looked up
+Snap Creative Kit,0.02,aar,https://repo1.maven.org/maven2,com.snap.creativekit:creativekit,
+asmack,0.02,not_checked,,,discontinued or no public Maven coordinate looked up
+Amazon GameCircle,0.01,not_checked,,,discontinued or no public Maven coordinate looked up
+BeInToo,0.01,not_checked,,,discontinued or no public Maven coordinate looked up
+MobVista,0.01,not_checked,,,discontinued or no public Maven coordinate looked up
+Snap Login Kit,0.01,aar,https://repo1.maven.org/maven2,com.snap.loginkit:loginkit,
+JTwitter,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+OpenFeint,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+Papaya Social,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+Playhaven,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+ScoreLoop,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+Snap Bitmoji Kit,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+Twitter API ME,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+swarm,0.00,not_checked,,,discontinued or no public Maven coordinate looked up
+Android GIF Drawable,,aar,https://repo1.maven.org/maven2,pl.droidsonroids.gif:android-gif-drawable,
+AndroidX Biometric,,aar,https://dl.google.com/dl/android/maven2,androidx.biometric:biometric,
+AndroidX Credentials,,aar,https://dl.google.com/dl/android/maven2,androidx.credentials:credentials,
+AndroidX MediaRouter,,aar,https://dl.google.com/dl/android/maven2,androidx.mediarouter:mediarouter,
+Brotli,,jar,https://repo1.maven.org/maven2,org.brotli:dec,
+CameraX,,aar,https://dl.google.com/dl/android/maven2,androidx.camera:camera-core,
+Google Maps SDK,,aar,https://dl.google.com/dl/android/maven2,com.google.android.gms:play-services-maps,
+Jetpack Navigation,,aar,https://dl.google.com/dl/android/maven2,androidx.navigation:navigation-runtime,
+Litho,,aar,https://repo1.maven.org/maven2,com.facebook.litho:litho-core,
+ReactiveX,,jar,https://repo1.maven.org/maven2,io.reactivex.rxjava3:rxjava,
+Simple Logging Facade for Java (SLF4J),,jar,https://repo1.maven.org/maven2,org.slf4j:slf4j-api,
+WebRTC,,excluded,,,no single canonical Maven coordinate
+XZ for Java,,jar,https://repo1.maven.org/maven2,org.tukaani:xz,
+Yoga,,unverified,,com.facebook.yoga:yoga,no AAR or JAR found at the coordinate tried
+kotlinx-datetime,,jar,https://repo1.maven.org/maven2,org.jetbrains.kotlinx:kotlinx-datetime,
