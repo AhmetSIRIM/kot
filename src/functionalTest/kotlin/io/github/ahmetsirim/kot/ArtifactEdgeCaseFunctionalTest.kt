@@ -15,8 +15,8 @@ import java.io.File
  *
  * Unmeasurable artifacts: the check functions' second exit (a declared floor whose emitted
  * counterpart cannot be read fails HARD, because a gate that cannot measure is broken, not
- * passing): every one of its five paths is pinned here, plus the
- * two wiring edges in front of them (a non-archive artifact and no artifact at all).
+ * passing): each of its paths is pinned here, plus the two wiring edges in front of them (a
+ * non-archive artifact and no artifact at all).
  */
 class ArtifactEdgeCaseFunctionalTest {
 
@@ -160,9 +160,12 @@ class ArtifactEdgeCaseFunctionalTest {
         result.output shouldContain "bytecode major 61 <= JVM 17 floor"
     }
 
-    /** No classes.jar at all: nothing bytecode-related is measurable, so the reader refuses. */
+    /**
+     * No classes.jar, and the archive's own entries hold no class either (a placeholder AAR):
+     * a declared class dimension has nothing to measure and fails.
+     */
     @Test
-    fun `fails hard when the archive carries no classes jar`() {
+    fun `fails hard when a class floor is declared but the archive carries no classes jar`() {
         AarFixture.writeCustom(
             destination = File(projectDir, "fixture.aar"),
             classes = emptyList(),
@@ -173,7 +176,58 @@ class ArtifactEdgeCaseFunctionalTest {
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain "classes.jar not found in fixture.aar"
+        result.output shouldContain "no class carrying kotlin.Metadata found in fixture.aar"
+    }
+
+    /** The same placeholder under the bytecode floor: no class to measure, so the gate fails. */
+    @Test
+    fun `fails hard when the JVM floor is declared but the archive carries no classes jar`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = emptyList(),
+            aarMetadataLines = listOf("minCompileSdk=36", "minAndroidGradlePluginVersion=8.1.0"),
+            includeClassesJar = false,
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(17) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "kot: no classes found in fixture.aar"
+    }
+
+    /**
+     * An archive that carries classes both in a classes.jar and beside it: the nested jar must
+     * not hide the others, or the newer class would pass unread.
+     */
+    @Test
+    fun `reads the classes beside a classes jar as well as the ones inside it`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(name = "fixture/Nested", classMajorVersion = 52)),
+            aarMetadataLines = null,
+            directClasses = listOf(FixtureClass(name = "fixture/Direct", classMajorVersion = 61)),
+        )
+        writeConsumerBuild("""kot { jvmTargetFloor.set(8) }""")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "bytecode major version 61 exceeds the JVM 8 floor"
+    }
+
+    /** The same placeholder still carries its Android-side floors, and those stay verifiable. */
+    @Test
+    fun `verifies the Android floors of an archive that carries no classes jar`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = emptyList(),
+            aarMetadataLines = listOf("minCompileSdk=36", "minAndroidGradlePluginVersion=8.1.0"),
+            includeClassesJar = false,
+        )
+        writeConsumerBuild("""kot { compileSdkFloor.set(36) }""")
+
+        val result: BuildResult = runner().build()
+
+        result.output shouldContain "minCompileSdk 36 <= floor 36"
     }
 
     /** A declared metadata floor over an archive with no Kotlin class cannot be waved through. */
@@ -272,7 +326,7 @@ class ArtifactEdgeCaseFunctionalTest {
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain "no .class entries found in classes.jar of fixture.aar"
+        result.output shouldContain "kot: no classes found in fixture.aar"
     }
 
     /**

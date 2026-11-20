@@ -1,7 +1,7 @@
 package io.github.ahmetsirim.kot
 
 /**
- * The consumer-facing floors an AAR actually emits, one field per verified dimension.
+ * The consumer-facing floors an archive actually emits, one field per verified dimension.
  * Every field is nullable: null means "the artifact does not carry this fact" (no metadata
  * entry, no Kotlin class, no class at all), and the task decides per dimension what absence means.
  */

@@ -17,15 +17,16 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 /**
- * Producer-side gate over a built AAR: reads the consumer floors the artifact actually emits
- * and fails the build when any of them demands more than the floors declared in the kot { } block.
+ * Producer-side gate over a built archive (an AAR or a plain JAR): reads the consumer floors the
+ * artifact actually emits and fails the build when any of them demands more than the floors
+ * declared in the kot { } block.
  */
 // Cacheable: the same artifact and floors produce the same verdict and the same report.
 @CacheableTask
 abstract class VerifyConsumerFloorTask : DefaultTask() {
 
     // PathSensitivity.NONE: the verdict depends only on the bytes of the archive, so a moved or
-    // renamed AAR is not a change.
+    // renamed archive is not a change.
     //
     // @Optional does not make the artifact optional for the gate. It only moves the "no value"
     // failure from Gradle's input validation into the action, which can say why the value is
@@ -91,20 +92,20 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      */
     @TaskAction
     fun verify() {
-        val aarFile: File = resolveArtifact()
+        val archiveFile: File = resolveArtifact()
         ensureAtLeastOneFloorIsDeclared()
 
-        val emittedFloors: EmittedFloors = EmittedFloorReader.read(aarFile = aarFile)
+        val emittedFloors: EmittedFloors = EmittedFloorReader.read(archiveFile = archiveFile)
         writeEmittedFloorsReport(emittedFloors = emittedFloors)
 
         val checkResults: List<FloorCheckResult> = listOf(
-            checkKotlinMetadataFloor(emittedFloors = emittedFloors, aarFileName = aarFile.name),
-            checkCompileSdkFloor(emittedFloors = emittedFloors, aarFileName = aarFile.name),
-            checkAgpFloor(emittedFloors = emittedFloors, aarFileName = aarFile.name),
-            checkJvmTargetFloor(emittedFloors = emittedFloors, aarFileName = aarFile.name),
+            checkKotlinMetadataFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
+            checkCompileSdkFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
+            checkAgpFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
+            checkJvmTargetFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
         )
 
-        reportAndGate(checkResults = checkResults, aarFileName = aarFile.name)
+        reportAndGate(checkResults = checkResults, archiveFileName = archiveFile.name)
     }
 
     /**
@@ -181,7 +182,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * The headline dimension: which Kotlin compilers can read this AAR.
+     * The headline dimension: which Kotlin compilers can read this archive.
      *
      * Background: kotlinc stamps every class it compiles with a @kotlin.Metadata annotation whose
      * mv field holds the binary metadata version as ints, for example [2, 2, 0]. A consumer's
@@ -193,11 +194,11 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      * Comparison: only major.minor of the emitted stamp against the declared "major.minor"
      * string, both as int lists, because comparing versions as text would order "2.10" below "2.9".
      */
-    private fun checkKotlinMetadataFloor(emittedFloors: EmittedFloors, aarFileName: String): FloorCheckResult {
+    private fun checkKotlinMetadataFloor(emittedFloors: EmittedFloors, archiveFileName: String): FloorCheckResult {
         val declaredFloor: String = kotlinMetadataFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "kotlinMetadataFloor")
         val emittedVersionParts: List<Int> = emittedFloors.kotlinMetadataVersion
-            ?: throw GradleException("kot: no class carrying kotlin.Metadata found in $aarFileName")
+            ?: throw GradleException("kot: no class carrying kotlin.Metadata found in $archiveFileName")
 
         // Only major.minor participate; the patch component carries no compatibility meaning here.
         val emittedMajorMinor: List<Int> = emittedVersionParts
@@ -232,16 +233,16 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      * compileSdk is below the recorded minCompileSdk. The emitted value therefore dictates what
      * every consumer must have. Both sides are single API-level ints, so the comparison is plain.
      */
-    private fun checkCompileSdkFloor(emittedFloors: EmittedFloors, aarFileName: String): FloorCheckResult {
+    private fun checkCompileSdkFloor(emittedFloors: EmittedFloors, archiveFileName: String): FloorCheckResult {
         val declaredFloor: Int = compileSdkFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "compileSdkFloor")
         val recordedMinCompileSdk: String = emittedFloors.minCompileSdk
-            ?: throw GradleException("kot: minCompileSdk missing from aar-metadata.properties in $aarFileName")
+            ?: throw GradleException("kot: minCompileSdk missing from aar-metadata.properties in $archiveFileName")
         // Judged here, not in the reader: a value this check cannot read must not fail a build
         // that never declared the dimension.
         val emittedMinCompileSdk: Int = recordedMinCompileSdk.toIntOrNull()
             ?: throw GradleException(
-                "kot: minCompileSdk in aar-metadata.properties of $aarFileName " +
+                "kot: minCompileSdk in aar-metadata.properties of $archiveFileName " +
                     "is not a number: \"$recordedMinCompileSdk\""
             )
 
@@ -265,12 +266,12 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      * means that declaration changed or was removed. A removed declaration degrades to AGP's
      * 1.0.0 default, which a <= check would wave through silently; equality turns both drifts red.
      */
-    private fun checkAgpFloor(emittedFloors: EmittedFloors, aarFileName: String): FloorCheckResult {
+    private fun checkAgpFloor(emittedFloors: EmittedFloors, archiveFileName: String): FloorCheckResult {
         val declaredFloor: String = agpFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "agpFloor")
         val emittedMinAgpVersion: String = emittedFloors.minAgpVersion
             ?: throw GradleException(
-                "kot: minAndroidGradlePluginVersion missing from aar-metadata.properties in $aarFileName"
+                "kot: minAndroidGradlePluginVersion missing from aar-metadata.properties in $archiveFileName"
             )
 
         return if (emittedMinAgpVersion != declaredFloor) {
@@ -284,7 +285,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Asserts no class in the AAR targets a newer JVM than the declared floor.
+     * Asserts no class in the archive targets a newer JVM than the declared floor.
      *
      * Background: every .class file carries a "major version" (bytes 6-7 of its header), the
      * bytecode format the class targets; a JVM refuses classes newer than itself with
@@ -292,12 +293,13 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      * Java 17 -> 61), so the declared Java release converts onto that scale (+44) before
      * comparing against the highest major found across the artifact's classes.
      */
-    private fun checkJvmTargetFloor(emittedFloors: EmittedFloors, aarFileName: String): FloorCheckResult {
+    private fun checkJvmTargetFloor(emittedFloors: EmittedFloors, archiveFileName: String): FloorCheckResult {
         val declaredFloor: Int = jvmTargetFloor.orNull
             ?: return FloorCheckResult.Skipped(floorName = "jvmTargetFloor")
         val emittedMaxClassMajor: Int = emittedFloors.maxClassMajorVersion
             ?: throw GradleException(
-                "kot: no .class entries found in classes.jar of $aarFileName or in the jars it bundles under libs/"
+                "kot: no classes found in $archiveFileName that set a bytecode floor. A module descriptor and " +
+                    "versioned classes do not, and the jars under libs/ are read only beside a classes.jar."
             )
 
         val declaredFloorAsClassMajor: Int = declaredFloor + JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET
@@ -323,7 +325,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      *    stopping at the first, so one red run shows the full damage,
      *  - the passed summary prints only on a clean run.
      */
-    private fun reportAndGate(checkResults: List<FloorCheckResult>, aarFileName: String) {
+    private fun reportAndGate(checkResults: List<FloorCheckResult>, archiveFileName: String) {
         val skippedFloorNames: List<String> = checkResults
             .filterIsInstance<FloorCheckResult.Skipped>()
             .map { skipped: FloorCheckResult.Skipped -> skipped.floorName }
@@ -336,7 +338,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             .map { violated: FloorCheckResult.Violated -> violated.line }
         if (violationLines.isNotEmpty()) {
             throw GradleException(
-                "kot: consumer floor regression in $aarFileName " +
+                "kot: consumer floor regression in $archiveFileName " +
                         "(the artifact demands more from consumers than the declared floor):\n" +
                         violationLines.joinToString(separator = "\n") { line: String -> "  - $line" } +
                         "\nRaise the floor deliberately in the kot { } block, or revert the change that widened it."
@@ -348,7 +350,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             .map { passed: FloorCheckResult.Passed -> passed.line }
 
         logger.lifecycle(
-            "kot: consumer floor check passed for $aarFileName:\n" +
+            "kot: consumer floor check passed for $archiveFileName:\n" +
                     passedLines.joinToString(separator = "\n") { line: String -> "  - $line" }
         )
     }

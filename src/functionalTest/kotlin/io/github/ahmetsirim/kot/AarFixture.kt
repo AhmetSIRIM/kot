@@ -8,7 +8,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * One synthetic class inside a jar of the fixture AAR, every emitted fact dialed per class.
+ * One synthetic class of a fixture archive, every emitted fact dialed per class.
  *
  * [metadataVersion] null means a plain, non-Kotlin class (no @kotlin.Metadata at all);
  * [decoyMetadataVersion] adds a SECOND, duplicate annotation no healthy compiler emits.
@@ -65,7 +65,8 @@ internal object AarFixture {
      * [aarMetadataLines] null omits the properties entry entirely (a line list allows dropping
      * single keys), [includeClassesJar] false omits the nested jar itself. [bundledJars] maps a
      * jar file name to its classes and lands under `libs/`, where AGP packs a library's local
-     * jar dependencies.
+     * jar dependencies. [directClasses] sit in the archive itself, beside the nested jars: a
+     * shape no AGP build emits.
      */
     fun writeCustom(
         destination: File,
@@ -73,6 +74,7 @@ internal object AarFixture {
         aarMetadataLines: List<String>?,
         includeClassesJar: Boolean = true,
         bundledJars: Map<String, List<FixtureClass>> = emptyMap(),
+        directClasses: List<FixtureClass> = emptyList(),
     ): File {
         ZipOutputStream(destination.outputStream()).use { aar: ZipOutputStream ->
             if (includeClassesJar) {
@@ -87,6 +89,12 @@ internal object AarFixture {
                 aar.closeEntry()
             }
 
+            directClasses.forEach { fixtureClass: FixtureClass ->
+                aar.putNextEntry(ZipEntry("${fixtureClass.name}.class"))
+                aar.write(classBytes(fixtureClass = fixtureClass))
+                aar.closeEntry()
+            }
+
             if (aarMetadataLines != null) {
                 aar.putNextEntry(ZipEntry("META-INF/com/android/build/gradle/aar-metadata.properties"))
                 aar.write(aarMetadataLines.joinToString(separator = "\n", postfix = "\n").toByteArray())
@@ -96,7 +104,8 @@ internal object AarFixture {
         return destination
     }
 
-    private fun classesJarBytes(classes: List<FixtureClass>): ByteArray {
+    /** A jar holding [classes] at its top level, as bytes; an empty list yields a jar with only a manifest. */
+    fun classesJarBytes(classes: List<FixtureClass>): ByteArray {
         return ByteArrayOutputStream().also { buffer: ByteArrayOutputStream ->
             ZipOutputStream(buffer).use { jar: ZipOutputStream ->
                 classes.forEach { fixtureClass: FixtureClass ->
