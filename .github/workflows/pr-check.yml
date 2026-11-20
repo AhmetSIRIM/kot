@@ -72,19 +72,11 @@ jobs:
           name: detekt-reports
           path: build/reports/detekt/
 
-  # Two rings of publish validation:
-  #   - validatePlugins: the static ring (task annotations, plugin descriptor); always runs.
-  #   - publishPlugins --validate-only: the strong ring; catches on the PR what would
-  #     otherwise fail at release time, in the tag run's publish step. It submits the real
-  #     publication and the Portal judges it as if publishing: dead credentials, required
-  #     Portal metadata gone missing (description, website/vcs links, tags), a broken
-  #     sources/javadoc wiring. It needs the Portal keys, and secrets do not flow into
-  #     fork PRs, so that STEP is skipped for forks; a job-level skip would turn the
-  #     summary gate red instead (skipped counts as failed there, on purpose).
-  #
-  # VERSION_NAME=0.0.0 is a validation sentinel, not a real version: the Portal rejects a
-  # version that exists already even under --validate-only, and 0.0.0 can never be released
-  # (the publish workflow only accepts tags strictly greater than the latest release).
+  # The static ring of publish validation: task annotations and the plugin descriptor.
+  # The Portal's own verdict on the publication (required listing metadata, the sources and
+  # javadoc wiring, live credentials) is left to the release run on purpose: asking the Portal
+  # needs the publish keys, and a pull request build runs dependency code nobody has read, so
+  # the keys stay out of it.
   publish-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -95,12 +87,6 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Validate plugin metadata
         run: ./gradlew validatePlugins
-      - name: Dry-run the publication against the Portal
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        run: ./gradlew publishPlugins --validate-only -PVERSION_NAME=0.0.0
-        env:
-          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
-          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
 
   # Lints the automation itself: actionlint catches YAML and expression mistakes (a wrong
   # context name, a bad needs reference, a broken shell fragment), zizmor catches
