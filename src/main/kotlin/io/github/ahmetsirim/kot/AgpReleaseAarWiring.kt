@@ -5,6 +5,7 @@ import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.api.variant.LibraryVariant
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 
@@ -59,6 +60,15 @@ internal object AgpReleaseAarWiring {
                         project.objects.fileProperty()
                     }
                 )
+                // The stdlib version follows the artifact: known for a single release variant,
+                // withdrawn when the choice of variant is ambiguous. It is reached through the
+                // Kotlin floor, so with no floor declared the classpath is not resolved for it.
+                val runtimeStdlibVersion: Provider<String> = if (isOnlyReleaseVariantSoFar) {
+                    RuntimeKotlinStdlib.versionOn(runtimeClasspath = variant.runtimeConfiguration)
+                } else {
+                    project.objects.property(String::class.java)
+                }
+                task.kotlinStdlibVersion.convention(task.kotlinMetadataFloor.flatMap { runtimeStdlibVersion })
             }
 
             // Attached inside the variant callback on purpose: a library whose release variant is

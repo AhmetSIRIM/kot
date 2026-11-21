@@ -52,6 +52,8 @@ class AgpWiringFunctionalTest {
         result.task(":verifyConsumerFloor")?.outcome shouldBe TaskOutcome.SUCCESS
         result.output shouldContain "consumer floor check passed"
         result.output shouldContain "Kotlin metadata 2.2 <= floor 2.2" // Emitted by AGP's built-in Kotlin.
+        // The stdlib AGP's built-in Kotlin puts on the release runtime classpath.
+        result.output shouldContain Regex("""kotlin-stdlib 2\.2\.\d+ <= Kotlin floor 2\.2""")
         result.output shouldContain "minAndroidGradlePluginVersion = 8.1.0" // Round-trips from aarMetadata below.
     }
 
@@ -184,6 +186,8 @@ class AgpWiringFunctionalTest {
         result.task(":verifyConsumerFloor")?.outcome shouldBe TaskOutcome.SUCCESS
         result.output shouldContain "consumer floor check passed for handpicked.aar"
         result.output shouldContain UNVERIFIED_SIBLINGS_NOTICE
+        // No variant's classpath is taken for the stdlib either, for the same reason.
+        result.output shouldContain "kot: no kotlin-stdlib version to check"
     }
 
     /**

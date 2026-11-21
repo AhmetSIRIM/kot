@@ -17,9 +17,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - With the Java plugin applied (the Java library and Kotlin JVM plugins apply it), the archive
   of the `jar` task is wired into the gate and built before it is verified. An artifact set on
   the task still wins.
+- The `kotlin-stdlib` version a library brings to its consumers is held against
+  `kotlinMetadataFloor`. The wirings read it from the project's runtime classpath (the release
+  variant's for an Android library), dependencies of dependencies included, and it is written
+  to the report. Where no classpath is wired it can be set on the task as `kotlinStdlibVersion`.
+  A dependency that does not resolve fails the run instead of counting as "no stdlib".
 
 ### Changed
 
+- A library whose runtime classpath resolves a `kotlin-stdlib` newer than its declared Kotlin
+  floor now fails the gate, even when its own classes are stamped within the floor. A consumer's
+  compiler has to read that stdlib too, so such a build was green while its real floor was
+  higher.
 - In a project with the Java plugin applied, `check` now runs the gate. This can turn an
   existing JVM module's build red: a module that applies the plugin with no floor declared, or
   with only `compileSdkFloor` or `agpFloor` declared, now fails `check`. Declare its Kotlin

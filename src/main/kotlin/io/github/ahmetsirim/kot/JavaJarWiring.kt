@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.language.base.plugins.LifecycleBasePlugin
@@ -36,6 +37,12 @@ internal object JavaJarWiring {
                         if (jarTask.enabled) jarTask.archiveFile else noArchive
                     }
             )
+            // Reached through the Kotlin floor: with no floor declared the stdlib is not judged,
+            // and the runtime classpath is not resolved for it.
+            val runtimeStdlibVersion: Provider<String> = RuntimeKotlinStdlib.versionOn(
+                runtimeClasspath = project.configurations.getByName(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+            )
+            task.kotlinStdlibVersion.convention(task.kotlinMetadataFloor.flatMap { runtimeStdlibVersion })
         }
 
         // The dependency rides a Provider, so the attachToCheck opt-out is honored without
