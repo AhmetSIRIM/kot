@@ -18,24 +18,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of the `jar` task is wired into the gate and built before it is verified. An artifact set on
   the task still wins.
 - The `kotlin-stdlib` version a library brings to its consumers is held against
-  `kotlinMetadataFloor`. The wirings read it from the project's runtime classpath (the release
-  variant's for an Android library), dependencies of dependencies included, and it is written
-  to the report. Where no classpath is wired it can be set on the task as `kotlinStdlibVersion`.
-  A dependency that does not resolve fails the run instead of counting as "no stdlib".
+  `kotlinMetadataFloor`. The wirings take the highest version on the project's runtime
+  classpath (the release variant's for an Android library), selected or asked for by a
+  dependency, and it is written to the report. A `kotlin-stdlib` version the build forces lower
+  does not count, because the force is not published. Where no classpath is wired a version
+  can be set on the task as `kotlinStdlibVersion`.
 
 ### Changed
 
-- A library whose runtime classpath resolves a `kotlin-stdlib` newer than its declared Kotlin
-  floor now fails the gate, even when its own classes are stamped within the floor. A consumer's
-  compiler has to read that stdlib too, so such a build was green while its real floor was
-  higher.
+- The `kotlin-stdlib` check can turn an existing build red in two ways. A library with a
+  Kotlin floor declared whose runtime classpath carries a newer `kotlin-stdlib`, selected or
+  asked for, now fails the gate even when its own classes are stamped within the floor: a
+  consumer's compiler reads that stdlib too, so such a build was green over a higher real
+  floor. And with a Kotlin floor declared, a runtime dependency that does not resolve now
+  fails the gate instead of going unnoticed.
 - A run with no floor declared still fails, and now shows the floors the artifact emits as a
   `kot { }` block to start from. The artifact is read before the failure, so the report is
   written on such a run too, and an unreadable artifact fails with its own error first.
 - In a project with the Java plugin applied, `check` now runs the gate. This can turn an
-  existing JVM module's build red: a module that applies the plugin with no floor declared, or
-  with only `compileSdkFloor` or `agpFloor` declared, now fails `check`. Declare its Kotlin
-  metadata or bytecode floor, or opt out with `attachToCheck.set(false)`.
+  existing JVM module's build red: a module that applies the plugin with no floor declared,
+  with only `compileSdkFloor` or `agpFloor` declared, or with its `jar` task disabled and no
+  artifact set, now fails `check`. Declare its Kotlin metadata or bytecode floor, set the
+  artifact, or opt out with `attachToCheck.set(false)`.
 - The message for a run with no artifact names both wirings.
 - An AAR with no `classes.jar` is no longer refused outright. Its Android floors are verified
   as before; a declared Kotlin metadata or bytecode floor still fails, because the archive has
