@@ -14,9 +14,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a module descriptor and the versioned classes of a multi-release JAR do not raise the bytecode
   floor, because a consumer on an older JVM never loads them. The jars nested in an AAR are
   scanned whole, as before.
+- With the Java plugin applied (the Java library and Kotlin JVM plugins apply it), the archive
+  of the `jar` task is wired into the gate and built before it is verified. An artifact set on
+  the task still wins.
 
 ### Changed
 
+- In a project with the Java plugin applied, `check` now runs the gate. This can turn an
+  existing JVM module's build red: a module that applies the plugin with no floor declared, or
+  with only `compileSdkFloor` or `agpFloor` declared, now fails `check`. Declare its Kotlin
+  metadata or bytecode floor, or opt out with `attachToCheck.set(false)`.
+- The message for a run with no artifact names both wirings.
 - An AAR with no `classes.jar` is no longer refused outright. Its Android floors are verified
   as before; a declared Kotlin metadata or bytecode floor still fails, because the archive has
   no class to measure.

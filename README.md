@@ -82,8 +82,9 @@ Run `./gradlew verifyConsumerFloor`: the release AAR is built (the wiring rides 
 `SingleArtifact.AAR`, so the ordering comes for free) and every declared floor is verified
 against it. Behavior worth knowing:
 
-- With `com.android.library` applied, the gate also runs as part of `./gradlew check` (and so
-  `build`) by default; opt out with `attachToCheck.set(false)` in the `kot { }` block.
+- With `com.android.library` or the Java plugin applied, the gate also runs as part of
+  `./gradlew check` (and so `build`) by default; opt out with `attachToCheck.set(false)` in the
+  `kot { }` block.
 - Every run that reads the artifact (pass or fail) writes the measured floors to
   `build/reports/kot/emitted-floors.properties`, so the consumer bounds your artifact carries
   are always one file away.
@@ -123,20 +124,27 @@ The run then says that the other release variants were not checked.
 
 ### Plain JARs
 
-A JVM library has the same Kotlin metadata and bytecode floors as an Android one. No Android
-plugin wires its archive in, so set the input yourself; taking it from the `jar` task also
-builds it first:
+A JVM library has the same Kotlin metadata and bytecode floors as an Android one. With the Java
+plugin applied, which the Java library plugin and the Kotlin JVM plugin both do, kot verifies
+the archive of the `jar` task:
 
 ```kotlin
+plugins {
+    kotlin("jvm") version "<kotlin_version>" // or `java-library`
+    id("io.github.ahmetsirim.kot") version "<latest_version>"
+}
+
 kot {
     kotlinMetadataFloor.set("2.1")
     jvmTargetFloor.set(8)
 }
-
-tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
-    artifact.set(tasks.named<Jar>("jar").flatMap { it.archiveFile })
-}
 ```
+
+`./gradlew verifyConsumerFloor` builds the jar and verifies it, and the gate runs as part of
+`check`, as it does for an Android library. The archive read is the one the `jar` task builds:
+if you publish another one (a shadow or fat jar), name that archive on the task, as shown below.
+A disabled `jar` task supplies no archive. A Kotlin Multiplatform project builds one jar per JVM
+target and is not wired either.
 
 Two kinds of class do not raise a plain JAR's bytecode floor, because a consumer on an older JVM
 never loads them: the module descriptor (`module-info.class` at the archive's root) and the
@@ -149,11 +157,14 @@ descriptor or a versioned class inside one of them does count toward the bytecod
 `compileSdkFloor` and `agpFloor` read a file only an AAR carries; declared over a plain JAR they
 fail the build, because a floor that cannot be measured is not a passing one.
 
-The same wiring verifies any archive by path, an AAR included:
+### Any other archive
+
+To verify an archive that no plugin wires in, set the input yourself. A value set on the task
+wins over the wiring:
 
 ```kotlin
 tasks.named<io.github.ahmetsirim.kot.VerifyConsumerFloorTask>("verifyConsumerFloor") {
-    artifact.set(layout.buildDirectory.file("outputs/aar/mylib-release.aar"))
+    artifact.set(layout.buildDirectory.file("libs/mylib-jvm.jar"))
 }
 ```
 
@@ -209,8 +220,7 @@ Pre-release (`0.x`), published on the Gradle Plugin Portal. What each version ch
 - The full Gradle x AGP compatibility matrix (the floor and newest cells exist; the grid
   between them, and `--configuration-cache` across versions, are planned)
 - Flavored-variant support (per-variant verification instead of the single release wiring)
-- Automatic wiring for JVM libraries (the `jar` task's archive, the way the release AAR is
-  wired for Android libraries)
+- Kotlin Multiplatform wiring (one archive per JVM target)
 - OpenSSF Best Practices (the bestpractices.dev self-assessment; the badge arrives with the
   passing level, not before)
 

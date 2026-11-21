@@ -31,8 +31,9 @@ abstract class KotExtension {
 
     /**
      * Whether `verifyConsumerFloor` also runs as part of `check` when the Android library
-     * plugin is applied. Set to `false` to keep `check` free of the gate; a gate that runs
-     * only when called by name misses the silent toolchain bumps it exists to catch.
+     * plugin or the Java plugin is applied. Set to `false` to keep `check` free of the gate; a
+     * gate that runs only when called by name misses the silent toolchain bumps it exists to
+     * catch.
      */
     abstract val attachToCheck: Property<Boolean>
 }
