@@ -33,6 +33,11 @@ internal object EmittedFloorReader {
     private const val VERSIONED_CLASSES_DIRECTORY = "META-INF/versions/"
     private const val MODULE_DESCRIPTOR_ENTRY_NAME = "module-info.class"
 
+    private val CLASS_FILE_MAGIC: ByteArray = byteArrayOf(0xCA.toByte(), 0xFE.toByte(), 0xBA.toByte(), 0xBE.toByte())
+
+    // The magic number (4 bytes), then the minor and major version (2 bytes each).
+    private const val CLASS_FILE_HEADER_SIZE = 8
+
     /**
      * Reads the properties entry, then every class of the archive. Nested jars are streamed
      * straight out of the outer archive; nothing is extracted to disk. Across classes the
@@ -48,9 +53,12 @@ internal object EmittedFloorReader {
             }
 
             val nestedJarsScan: BytecodeScan = archive.getEntry(CLASSES_JAR_ENTRY_NAME)
-                ?.let { classesJarEntry: ZipEntry -> scanNestedJars(aar = archive, classesJarEntry = classesJarEntry) }
+                ?.let { classesJarEntry: ZipEntry ->
+                    scanNestedJars(aar = archive, aarName = archiveFile.name, classesJarEntry = classesJarEntry)
+                }
                 ?: noClassScanned
-            val bytecodeScan: BytecodeScan = scanOwnClasses(archive = archive).mergedWith(other = nestedJarsScan)
+            val bytecodeScan: BytecodeScan = scanOwnClasses(archive = archive, archiveName = archiveFile.name)
+                .mergedWith(other = nestedJarsScan)
 
             return EmittedFloors(
                 kotlinMetadataVersion = bytecodeScan.maxMetadataVersion,
@@ -95,7 +103,7 @@ internal object EmittedFloorReader {
     private val noClassScanned = BytecodeScan(maxClassMajorVersion = null, maxMetadataVersion = null)
 
     /** Scans classes.jar and every jar under libs/, each one a jar nested inside the AAR. */
-    private fun scanNestedJars(aar: ZipFile, classesJarEntry: ZipEntry): BytecodeScan {
+    private fun scanNestedJars(aar: ZipFile, aarName: String, classesJarEntry: ZipEntry): BytecodeScan {
         val bundledJarEntries: List<ZipEntry> = aar.entries().asSequence()
             .filter { entry: ZipEntry ->
                 entry.name.startsWith(BUNDLED_JARS_DIRECTORY) && entry.name.endsWith(".jar", ignoreCase = true)
@@ -105,19 +113,23 @@ internal object EmittedFloorReader {
         return (listOf(classesJarEntry) + bundledJarEntries)
             .map { jarEntry: ZipEntry ->
                 ZipInputStream(aar.getInputStream(jarEntry)).use { nestedJar: ZipInputStream ->
-                    scanNestedJar(nestedJar = nestedJar)
+                    scanNestedJar(nestedJar = nestedJar, nestedJarLocation = "${jarEntry.name} of $aarName")
                 }
             }
             .fold(noClassScanned) { scan: BytecodeScan, jarScan: BytecodeScan -> scan.mergedWith(other = jarScan) }
     }
 
     /** Walks every .class entry of the opened jar stream. */
-    private fun scanNestedJar(nestedJar: ZipInputStream): BytecodeScan {
+    private fun scanNestedJar(nestedJar: ZipInputStream, nestedJarLocation: String): BytecodeScan {
         return generateSequence { nestedJar.nextEntry }
             .filter { entry: ZipEntry -> entry.name.endsWith(".class") }
-            .fold(noClassScanned) { scan: BytecodeScan, _: ZipEntry ->
+            .fold(noClassScanned) { scan: BytecodeScan, classEntry: ZipEntry ->
                 // readBytes() reads only the current entry: the stream reports end-of-entry as end-of-stream.
-                scan.mergedWith(other = scanClass(classBytes = nestedJar.readBytes()))
+                val classScan: BytecodeScan = scanClass(
+                    classBytes = nestedJar.readBytes(),
+                    classLocation = "${classEntry.name} in $nestedJarLocation",
+                )
+                scan.mergedWith(other = classScan)
             }
     }
 
@@ -136,13 +148,16 @@ internal object EmittedFloorReader {
      *
      * Neither rule reaches into the jars nested in an AAR: those are scanned whole.
      */
-    private fun scanOwnClasses(archive: ZipFile): BytecodeScan {
+    private fun scanOwnClasses(archive: ZipFile, archiveName: String): BytecodeScan {
         return archive.entries().asSequence()
             .filter { entry: ZipEntry -> entry.name.endsWith(".class") && entry.name != MODULE_DESCRIPTOR_ENTRY_NAME }
             .fold(noClassScanned) { scan: BytecodeScan, classEntry: ZipEntry ->
                 val classBytes: ByteArray = archive.getInputStream(classEntry)
                     .use { stream: InputStream -> stream.readBytes() }
-                val classScan: BytecodeScan = scanClass(classBytes = classBytes)
+                val classScan: BytecodeScan = scanClass(
+                    classBytes = classBytes,
+                    classLocation = "${classEntry.name} in $archiveName",
+                )
                 val isVersioned: Boolean = classEntry.name.startsWith(VERSIONED_CLASSES_DIRECTORY)
                 scan.mergedWith(other = if (isVersioned) classScan.copy(maxClassMajorVersion = null) else classScan)
             }
@@ -151,14 +166,34 @@ internal object EmittedFloorReader {
     /**
      * Runs one class's bytes through ASM and returns what it found. The SKIP_* flags leave out
      * method bodies, debug info and stack frames, none of which this scan reads.
+     *
+     * Bytes that do not start as a class file, or a class file of a version ASM does not know,
+     * fail here with [classLocation]: ASM's own errors (an index out of bounds, an unsupported
+     * class file version) name neither the entry nor its archive. A class file cut short after
+     * its header still fails with ASM's own error.
      */
-    private fun scanClass(classBytes: ByteArray): BytecodeScan {
+    private fun scanClass(classBytes: ByteArray, classLocation: String): BytecodeScan {
+        if (!startsWithClassFileMagic(bytes = classBytes)) {
+            throw GradleException("kot: $classLocation cannot be read as a class file (it does not start as one)")
+        }
+
         val visitor = ScanningClassVisitor()
-        ClassReader(classBytes).accept(
-            visitor,
-            ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
-        )
+        try {
+            ClassReader(classBytes).accept(
+                visitor,
+                ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
+            )
+        } catch (failure: IllegalArgumentException) {
+            val reason: String = failure.message ?: failure.javaClass.simpleName
+            throw GradleException("kot: $classLocation cannot be read as a class file ($reason)", failure)
+        }
         return BytecodeScan(maxClassMajorVersion = visitor.majorVersion, maxMetadataVersion = visitor.metadataVersion)
+    }
+
+    /** True when [bytes] open with the four bytes every class file starts with, followed by its version. */
+    private fun startsWithClassFileMagic(bytes: ByteArray): Boolean {
+        return bytes.size >= CLASS_FILE_HEADER_SIZE &&
+            CLASS_FILE_MAGIC.indices.all { index: Int -> bytes[index] == CLASS_FILE_MAGIC[index] }
     }
 
 }

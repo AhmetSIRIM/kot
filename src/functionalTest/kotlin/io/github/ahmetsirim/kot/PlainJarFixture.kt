@@ -14,9 +14,13 @@ import java.io.File
  */
 internal object PlainJarFixture {
 
-    /** Writes [classes] into [destination] and returns it. */
-    fun write(destination: File, classes: List<FixtureClass>): File {
-        destination.writeBytes(AarFixture.classesJarBytes(classes = classes))
+    /** Writes [classes] and [rawEntries] (entry name to content) into [destination] and returns it. */
+    fun write(
+        destination: File,
+        classes: List<FixtureClass>,
+        rawEntries: Map<String, ByteArray> = emptyMap(),
+    ): File {
+        destination.writeBytes(AarFixture.classesJarBytes(classes = classes, rawEntries = rawEntries))
         return destination
     }
 }
