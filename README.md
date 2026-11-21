@@ -93,7 +93,14 @@ against it. Behavior worth knowing:
   `kotlin-stdlib` version when one is known, to `build/reports/kot/emitted-floors.properties`,
   so the consumer bounds your artifact carries are always one file away.
 - Undeclared floors are skipped, and the skip is named in the output; declaring none at all is
-  an error, because a gate that guards nothing should not run green.
+  an error, because a gate that guards nothing should not run green. That error shows the floors
+  the artifact emits as a `kot { }` block, so a first run with an empty block tells you what to
+  write. They are what the artifact demands today, not a floor anyone chose: lower the Kotlin,
+  compileSdk and JVM floors to what your consumers need and let the gate show what has to
+  change. `agpFloor` is an equality check, so it has to stay equal to your
+  `aarMetadata.minAgpVersion`; a library that declares none gets no `agpFloor` line. A pasted
+  Kotlin floor can still fail on the `kotlin-stdlib` the library brings, which is checked only
+  once that floor is declared.
 - Every violated dimension is reported in a single failure, so one red build shows the full
   damage of a toolchain bump.
 - The task is configuration-cache compatible.

@@ -107,10 +107,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     @TaskAction
     fun verify() {
         val archiveFile: File = resolveArtifact()
-        ensureAtLeastOneFloorIsDeclared()
-
         val emittedFloors: EmittedFloors = EmittedFloorReader.read(archiveFile = archiveFile)
         writeEmittedFloorsReport(emittedFloors = emittedFloors)
+        ensureAtLeastOneFloorIsDeclared(emittedFloors = emittedFloors)
 
         val checkResults: List<FloorCheckResult> = listOfNotNull(
             checkKotlinMetadataFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
@@ -186,16 +185,50 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Fails fast when no floor is declared: a gate with no floors would run green while guarding
+     * Fails when no floor is declared: a gate with no floors would run green while guarding
      * nothing, which is worse than having no gate at all.
+     *
+     * The failure shows what the artifact emits as a kot { } block, so a first run ends with
+     * something to paste. A value the artifact does not emit, or one that is not a number where
+     * the floor is one, is left out. So is the AGP floor a library records when it declares
+     * none: that value is the absence of a floor, and offering it would invite pinning it.
      */
-    private fun ensureAtLeastOneFloorIsDeclared() {
+    private fun ensureAtLeastOneFloorIsDeclared(emittedFloors: EmittedFloors) {
         val anyFloorIsDeclared: Boolean = listOf(kotlinMetadataFloor, compileSdkFloor, agpFloor, jvmTargetFloor)
             .any { floor: Property<*> -> floor.isPresent }
+        if (anyFloorIsDeclared) return
 
-        if (!anyFloorIsDeclared) {
-            throw GradleException("kot: no consumer floor declared; declare at least one floor in the kot { } block.")
+        val measuredFloorLines: List<String> = listOfNotNull(
+            emittedFloors.kotlinMetadataVersion?.let { parts: List<Int> ->
+                "kotlinMetadataFloor.set(\"${parts.take(n = 2).joinToString(separator = ".")}\")"
+            },
+            emittedFloors.minCompileSdk?.toIntOrNull()?.let { value: Int -> "compileSdkFloor.set($value)" },
+            emittedFloors.minAgpVersion
+                ?.takeIf { value: String -> value != AGP_FLOOR_WHEN_NONE_IS_DECLARED }
+                ?.let { value: String -> "agpFloor.set(\"$value\")" },
+            emittedFloors.maxClassMajorVersion?.let { classMajor: Int ->
+                "jvmTargetFloor.set(${classMajor - JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET})"
+            },
+        )
+        // The stdlib is resolved only once a Kotlin floor is declared, so the block cannot
+        // account for it; the note keeps a pasted floor from reading as a promise to pass.
+        val stdlibNote: String = if (emittedFloors.kotlinMetadataVersion == null) {
+            ""
+        } else {
+            "\n\nOnce declared, the Kotlin floor also holds the kotlin-stdlib on the runtime classpath."
         }
+        val measuredFloorsBlock: String = if (measuredFloorLines.isEmpty()) {
+            ""
+        } else {
+            "\nThis artifact emits the floors below: what it demands today, not a floor anyone chose. " +
+                "Declare the ones you mean to hold:\n\nkot {\n" +
+                measuredFloorLines.joinToString(separator = "\n") { line: String -> "    $line" } + "\n}" +
+                stdlibNote
+        }
+
+        throw GradleException(
+            "kot: no consumer floor declared; declare at least one floor in the kot { } block.$measuredFloorsBlock"
+        )
     }
 
     /**
@@ -415,6 +448,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     private companion object {
         // A class file's major version sits on this fixed offset from the Java release (Java 17 -> 61).
         private const val JAVA_RELEASE_TO_CLASS_MAJOR_OFFSET = 44
+
+        // What AGP writes as minAndroidGradlePluginVersion for a library that declares none.
+        private const val AGP_FLOOR_WHEN_NONE_IS_DECLARED = "1.0.0"
     }
 
     /** One dimension's verdict; the three cases drive the three sections of [reportAndGate]. */

@@ -29,6 +29,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   floor now fails the gate, even when its own classes are stamped within the floor. A consumer's
   compiler has to read that stdlib too, so such a build was green while its real floor was
   higher.
+- A run with no floor declared still fails, and now shows the floors the artifact emits as a
+  `kot { }` block to start from. The artifact is read before the failure, so the report is
+  written on such a run too, and an unreadable artifact fails with its own error first.
 - In a project with the Java plugin applied, `check` now runs the gate. This can turn an
   existing JVM module's build red: a module that applies the plugin with no floor declared, or
   with only `compileSdkFloor` or `agpFloor` declared, now fails `check`. Declare its Kotlin
