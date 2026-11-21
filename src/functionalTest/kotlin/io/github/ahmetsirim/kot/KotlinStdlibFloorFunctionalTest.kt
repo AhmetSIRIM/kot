@@ -54,6 +54,31 @@ class KotlinStdlibFloorFunctionalTest {
         result.output shouldContain "kotlin-stdlib 2.4.21 exceeds the declared Kotlin floor 2.2"
     }
 
+    /**
+     * A version forced in the producer's build is not published: consumers resolve the graph
+     * without it and receive the stdlib the dependency asks for. The forced version would pass
+     * the floor, so the verdict shows that the requested one was taken.
+     */
+    @Test
+    fun `counts the kotlin-stdlib a dependency asks for when the build forces a lower one`() {
+        publishModule(coordinate = "org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
+        publishModule(coordinate = "org.jetbrains.kotlin:kotlin-stdlib:2.4.21")
+        publishModule(coordinate = "fixture:dependency:1.0", dependsOn = "org.jetbrains.kotlin:kotlin-stdlib:2.4.21")
+        writeProject(dependency = "fixture:dependency:1.0")
+        File(projectDir, "build.gradle.kts").appendText(
+            """
+
+            configurations.all {
+                resolutionStrategy.force("org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
+            }
+            """.trimIndent()
+        )
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "kotlin-stdlib 2.4.21 exceeds the declared Kotlin floor 2.2"
+    }
+
     @Test
     fun `says so when the runtime classpath carries no kotlin-stdlib`() {
         publishModule(coordinate = "fixture:dependency:1.0")

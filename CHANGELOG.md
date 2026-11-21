@@ -20,7 +20,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `kotlin-stdlib` version a library brings to its consumers is held against
   `kotlinMetadataFloor`. The wirings read it from the project's runtime classpath (the release
   variant's for an Android library), dependencies of dependencies included, and it is written
-  to the report. Where no classpath is wired it can be set on the task as `kotlinStdlibVersion`.
+  to the report. A version a dependency asks for counts even when the build forces a lower one,
+  because the force is not published. Where no classpath is wired it can be set on the task as
+  `kotlinStdlibVersion`.
   A dependency that does not resolve fails the run instead of counting as "no stdlib".
 
 ### Changed

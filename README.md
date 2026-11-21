@@ -121,19 +121,23 @@ stdlib on its classpath by the same rule: a library whose classes are stamped `2
 brings `kotlin-stdlib` 2.4 needs a consumer on Kotlin 2.3. Setting the language version alone
 does not lower that.
 
-kot takes the version your own runtime classpath resolves to (the release variant's for an
-Android library, dependencies of dependencies included) and fails when it is above the floor.
+kot takes the highest version on your own runtime classpath (the release variant's for an
+Android library, dependencies of dependencies included), whether the classpath selects it or a
+dependency only asks for it, and fails when it is above the floor. A version you force or
+substitute in your own build does not lower it: that setting is not published, and consumers
+still resolve what the dependency asks for.
 To see who asks for it, run
 `./gradlew dependencyInsight --dependency kotlin-stdlib --configuration runtimeClasspath`
 (`releaseRuntimeClasspath` for an Android library). To lower it, set `coreLibrariesVersion` in
 the `kotlin { }` block and lower or replace the dependency that asks for more.
 
-The resolved version is a stand-in for what consumers receive, and it is off in two known
-ways:
+That version is a stand-in for what consumers receive, and it is off in known ways:
 
-- A version you force, exclude or substitute in your own build is not published. The gate
-  turns green while consumers still resolve the newer stdlib through the dependency that asks
-  for it.
+- A dependency you exclude leaves no trace on the classpath. If it is still published as a
+  dependency of your library, consumers receive the stdlib it asks for and the gate does not
+  see it.
+- A strict version constraint that you publish lowers the stdlib for consumers too, but the
+  gate still counts the higher version a dependency asks for.
 - A stdlib raised only by an `implementation` or `runtimeOnly` dependency reaches a plain JVM
   consumer's runtime classpath but not its compile classpath, so that consumer still compiles.
   The gate reports it all the same; it is the cautious reading, and the right one for Android
