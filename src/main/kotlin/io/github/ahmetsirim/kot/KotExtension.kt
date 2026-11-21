@@ -12,7 +12,9 @@ abstract class KotExtension {
 
     /**
      * Highest Kotlin metadata version the artifact may carry, as `major.minor` (for example
-     * `"2.2"`). The patch component of the emitted version is ignored.
+     * `"2.2"`). The patch component of the emitted version is ignored. The `kotlin-stdlib`
+     * version on the library's runtime classpath is held against the same floor, because a
+     * consumer's compiler has to read that stdlib as well.
      */
     abstract val kotlinMetadataFloor: Property<String>
 

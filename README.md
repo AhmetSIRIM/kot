@@ -50,6 +50,10 @@ kot opens the built archive and verifies what was actually **emitted**, not what
 | `minAndroidGradlePluginVersion` | `aar-metadata.properties`                  | `=` declared floor  |
 | Bytecode major version          | class-file header of every class           | `<=` declared floor |
 
+One more value comes from outside the archive and is held against the same Kotlin floor: the
+`kotlin-stdlib` version on the library's runtime classpath. See
+[What the Kotlin floor means](#what-the-kotlin-floor-means).
+
 In an AAR, classes are read from `classes.jar` and from every jar bundled under `libs/`. The
 classes an archive carries itself are read too, so the two class dimensions also cover a JVM
 library's JAR; see [Plain JARs](#plain-jars).
@@ -85,9 +89,9 @@ against it. Behavior worth knowing:
 - With `com.android.library` or the Java plugin applied, the gate also runs as part of
   `./gradlew check` (and so `build`) by default; opt out with `attachToCheck.set(false)` in the
   `kot { }` block.
-- Every run that reads the artifact (pass or fail) writes the measured floors to
-  `build/reports/kot/emitted-floors.properties`, so the consumer bounds your artifact carries
-  are always one file away.
+- Every run that reads the artifact (pass or fail) writes the measured floors, and the
+  `kotlin-stdlib` version when one is known, to `build/reports/kot/emitted-floors.properties`,
+  so the consumer bounds your artifact carries are always one file away.
 - Undeclared floors are skipped, and the skip is named in the output; declaring none at all is
   an error, because a gate that guards nothing should not run green.
 - Every violated dimension is reported in a single failure, so one red build shows the full
@@ -103,6 +107,36 @@ for consumers on Kotlin 2.1 and newer. Declare the floor one minor above the old
 consumers use. The rule is the compiler's own; the
 [kotlin-metadata-jvm documentation](https://github.com/JetBrains/kotlin/blob/master/libraries/kotlinx-metadata/jvm/ReadMe.md)
 states it.
+
+The same floor covers the `kotlin-stdlib` your library brings along. A consumer's build resolves
+to the newest stdlib anything in the dependency graph asks for, and its compiler reads the
+stdlib on its classpath by the same rule: a library whose classes are stamped `2.2` but which
+brings `kotlin-stdlib` 2.4 needs a consumer on Kotlin 2.3. Setting the language version alone
+does not lower that.
+
+kot takes the version your own runtime classpath resolves to (the release variant's for an
+Android library, dependencies of dependencies included) and fails when it is above the floor.
+To see who asks for it, run
+`./gradlew dependencyInsight --dependency kotlin-stdlib --configuration runtimeClasspath`
+(`releaseRuntimeClasspath` for an Android library). To lower it, set `coreLibrariesVersion` in
+the `kotlin { }` block and lower or replace the dependency that asks for more.
+
+The resolved version is a stand-in for what consumers receive, and it is off in two known
+ways:
+
+- A version you force, exclude or substitute in your own build is not published. The gate
+  turns green while consumers still resolve the newer stdlib through the dependency that asks
+  for it.
+- A stdlib raised only by an `implementation` or `runtimeOnly` dependency reaches a plain JVM
+  consumer's runtime classpath but not its compile classpath, so that consumer still compiles.
+  The gate reports it all the same; it is the cautious reading, and the right one for Android
+  consumers, whose compile classpath follows the runtime one.
+
+The version comes from the project the plugin is applied to, whatever archive the task reads. In
+a project with neither the Android library plugin nor the Java plugin, and in a library with
+several release variants, no classpath is wired: the run says it has no stdlib version to check,
+unless you give one on the task with `kotlinStdlibVersion.set("...")`. With no Kotlin floor
+declared the stdlib is not looked at.
 
 ### Libraries with product flavors
 

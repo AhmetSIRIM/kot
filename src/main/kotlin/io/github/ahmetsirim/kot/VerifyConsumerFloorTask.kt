@@ -66,6 +66,18 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     abstract val jvmTargetFloor: Property<Int>
 
     /**
+     * The kotlin-stdlib version consumers receive with the library, held against
+     * [kotlinMetadataFloor]: a consumer's compiler reads the stdlib on its classpath by the same
+     * rule as the library's own classes. The wirings supply the version the project's runtime
+     * classpath resolves to, whatever archive the task reads; a value set here wins. With no
+     * value (neither plugin applied, or several release variants) the stdlib is not checked,
+     * and the run says so. Not a floor: nothing is declared for it.
+     */
+    @get:Input
+    @get:Optional
+    abstract val kotlinStdlibVersion: Property<String>
+
+    /**
      * Names of the release variants the AGP wiring saw, one entry per variant. More than one
      * entry means a flavored library: the wiring then supplies no [artifact], and the task
      * names these variants when it fails for lack of one.
@@ -85,10 +97,12 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     /**
      * Guards, reads the artifact once, checks each dimension, then reports and gates.
      *
-     * Every check function has the same three exits: an undeclared floor returns
+     * Every floor's check function has the same three exits: an undeclared floor returns
      * [FloorCheckResult.Skipped]; a declared floor whose emitted counterpart cannot be read out
      * of the artifact fails hard, because a gate that cannot measure is broken, not passing; a
      * successful measurement returns [FloorCheckResult.Passed] or [FloorCheckResult.Violated].
+     * The kotlin-stdlib check is the exception: it has no floor of its own and adds a result
+     * only when a version is known.
      */
     @TaskAction
     fun verify() {
@@ -98,8 +112,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val emittedFloors: EmittedFloors = EmittedFloorReader.read(archiveFile = archiveFile)
         writeEmittedFloorsReport(emittedFloors = emittedFloors)
 
-        val checkResults: List<FloorCheckResult> = listOf(
+        val checkResults: List<FloorCheckResult> = listOfNotNull(
             checkKotlinMetadataFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
+            checkKotlinStdlibFloor(),
             checkCompileSdkFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
             checkAgpFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
             checkJvmTargetFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
@@ -126,6 +141,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             emittedFloors.minCompileSdk?.let { value: String -> "minCompileSdk=$value" },
             emittedFloors.minAgpVersion?.let { value: String -> "minAndroidGradlePluginVersion=$value" },
             emittedFloors.maxClassMajorVersion?.let { value: Int -> "maxClassMajorVersion=$value" },
+            kotlinStdlibVersion.orNull?.let { value: String -> "kotlinStdlibVersion=$value" },
         )
         reportFile.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
 
@@ -206,16 +222,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             .take(n = 2)
         val emittedVersion: String = emittedMajorMinor
             .joinToString(separator = ".")
-        // Strict parse: a malformed floor must fail the configuration mistake loudly. Falling
-        // back to 0 here would turn a typo into a guaranteed-red gate with a misleading message
-        // (or, with a floor like "99x", into a silently weakened one).
-        val declaredFloorParts: List<Int> = declaredFloor
-            .split(".")
-            .map { part: String ->
-                part.toIntOrNull() ?: throw GradleException(
-                    "kot: kotlinMetadataFloor \"$declaredFloor\" is not a dotted numeric version (like \"2.2\")."
-                )
-            }
+        val declaredFloorParts: List<Int> = parseKotlinFloor(declaredFloor = declaredFloor)
 
         return if (compareVersionParts(left = emittedMajorMinor, right = declaredFloorParts) > 0) {
             FloorCheckResult.Violated(
@@ -223,6 +230,55 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
             )
         } else {
             FloorCheckResult.Passed(line = "Kotlin metadata $emittedVersion <= floor $declaredFloor")
+        }
+    }
+
+    /**
+     * Holds the kotlin-stdlib consumers receive against the same Kotlin floor.
+     *
+     * Background: a library's classes are not all a consumer's compiler reads. Dependency
+     * resolution hands the consumer the newest kotlin-stdlib anything in the graph asks for, and
+     * the compiler refuses a stdlib more than one minor version ahead of itself, exactly as it
+     * refuses the library's classes. A library that keeps its own metadata stamp low but
+     * depends on a newer stdlib raises the floor all the same.
+     *
+     * Returns null when the Kotlin floor is not declared (the metadata check already reports the
+     * skip) or when no stdlib version is known, which the log line states.
+     */
+    private fun checkKotlinStdlibFloor(): FloorCheckResult? {
+        val declaredFloor: String? = kotlinMetadataFloor.orNull
+        val stdlibVersion: String? = kotlinStdlibVersion.orNull
+
+        return when {
+            declaredFloor == null -> null
+
+            stdlibVersion == null -> {
+                logger.lifecycle(
+                    "kot: no kotlin-stdlib version to check: the runtime classpath holds none, or none is " +
+                        "wired (no Android or Java plugin, or several release variants) and none is set on the task"
+                )
+                null
+            }
+
+            else -> {
+                // Only major.minor participate, as for the metadata stamp; both have to be there.
+                val stdlibMajorMinor: List<Int> = stdlibVersion.split(".").take(n = 2)
+                    .mapNotNull { part: String -> part.toIntOrNull() }
+                    .takeIf { parts: List<Int> -> parts.size == 2 }
+                    ?: throw GradleException(
+                        "kot: kotlin-stdlib version \"$stdlibVersion\" does not start with major.minor."
+                    )
+                val declaredFloorParts: List<Int> = parseKotlinFloor(declaredFloor = declaredFloor)
+
+                if (compareVersionParts(left = stdlibMajorMinor, right = declaredFloorParts) > 0) {
+                    FloorCheckResult.Violated(
+                        line = "kotlin-stdlib $stdlibVersion exceeds the declared Kotlin floor $declaredFloor " +
+                            "(consumers receive it with the library)"
+                    )
+                } else {
+                    FloorCheckResult.Passed(line = "kotlin-stdlib $stdlibVersion <= Kotlin floor $declaredFloor")
+                }
+            }
         }
     }
 
