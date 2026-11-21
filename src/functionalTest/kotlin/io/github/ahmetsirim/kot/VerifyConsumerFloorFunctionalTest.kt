@@ -168,6 +168,98 @@ class VerifyConsumerFloorFunctionalTest {
     }
 
     /**
+     * The first run of a new user: nothing is declared yet, so the failure hands over what the
+     * artifact emits as a block to paste. The build still fails; the measured values are a
+     * starting point for a decision, not a floor anyone chose.
+     */
+    @Test
+    fun `shows the measured floors as a kot block when none is declared`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"))
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain """kotlinMetadataFloor.set("2.2")"""
+        result.output shouldContain "compileSdkFloor.set(36)"
+        result.output shouldContain """agpFloor.set("8.1.0")"""
+        result.output shouldContain "jvmTargetFloor.set(17)"
+        // The artifact was read before the failure, so the report exists on this run too.
+        File(projectDir, "build/reports/kot/emitted-floors.properties").readText() shouldContain
+            "kotlinMetadataVersion=2.2.0"
+    }
+
+    /**
+     * AGP records 1.0.0 when the library declares no minAgpVersion. That is the absence of a
+     * floor, not a floor, so the block does not offer it.
+     */
+    @Test
+    fun `leaves the AGP default out of the block`() {
+        AarFixture.write(destination = File(projectDir, "fixture.aar"), minAgpVersion = "1.0.0")
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "compileSdkFloor.set(36)"
+        result.output.contains("agpFloor.set") shouldBe false
+    }
+
+    /** A minCompileSdk that is not a number cannot become an int floor, so it gets no line. */
+    @Test
+    fun `leaves a minCompileSdk that is not a number out of the block`() {
+        AarFixture.writeCustom(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass()),
+            aarMetadataLines = listOf("minCompileSdk=36.1", "minAndroidGradlePluginVersion=8.1.0"),
+        )
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain """agpFloor.set("8.1.0")"""
+        result.output.contains("compileSdkFloor.set") shouldBe false
+    }
+
+    /** An artifact that emits nothing measurable gets the bare failure, with no empty block. */
+    @Test
+    fun `shows no block when the artifact emits nothing`() {
+        PlainJarFixture.write(destination = File(projectDir, "fixture.aar"), classes = emptyList())
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "no consumer floor declared"
+        result.output.contains("This artifact emits") shouldBe false
+    }
+
+    /** The artifact is read first, so one that cannot be read is reported before the missing floors. */
+    @Test
+    fun `reports an unreadable artifact before the missing floors`() {
+        File(projectDir, "fixture.aar").writeText("this is not a zip")
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "kot: fixture.aar is not a readable zip archive"
+    }
+
+    /** A floor the artifact does not emit is left out of the block instead of being guessed. */
+    @Test
+    fun `leaves out of the block what the artifact does not emit`() {
+        PlainJarFixture.write(
+            destination = File(projectDir, "fixture.aar"),
+            classes = listOf(FixtureClass(classMajorVersion = 52, metadataVersion = null)),
+        )
+        writeConsumerBuild(kotBlock = "")
+
+        val result: BuildResult = runner().buildAndFail()
+
+        result.output shouldContain "jvmTargetFloor.set(8)"
+        result.output.contains("kotlinMetadataFloor.set") shouldBe false
+        result.output.contains("compileSdkFloor.set") shouldBe false
+        result.output.contains("agpFloor.set") shouldBe false
+    }
+
+    /**
      * The DSL's resolution order: a floor set directly on the task wins over the kot { } block,
      * because the plugin wires the extension through convention() (a default), not set() (an
      * assignment). The extension alone declares 2.0 and would fail against the emitted 2.2; the
