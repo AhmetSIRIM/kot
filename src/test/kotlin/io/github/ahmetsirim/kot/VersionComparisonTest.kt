@@ -6,11 +6,12 @@ import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
 /**
- * The unit spec of the version comparison pair, the smallest shared logic of the plugin:
+ * The unit spec of the version helpers, the smallest shared logic of the plugin:
  * [compareVersionParts] backs both the reader (picking the highest emitted version across
  * classes) and the task (emitted vs declared floor); [maxVersionParts] backs the reader and the
- * class visitor. Everything here runs as a plain JVM test: no Gradle build, no TestKit, no
- * fixture AAR, so a contract break surfaces in milliseconds instead of a functional-test run.
+ * class visitor; [leadingVersionParts] backs the kotlin-stdlib check. Everything here runs as a
+ * plain JVM test: no Gradle build, no TestKit, no fixture AAR, so a contract break surfaces in
+ * milliseconds instead of a functional-test run.
  *
  * The assertions pin the comparator CONTRACT (the sign of the result), never the magnitude:
  * the implementation happens to return per-component differences, and a test expecting -1
@@ -76,5 +77,18 @@ class VersionComparisonTest {
         maxVersionParts(left = listOf(1, 9), right = null) shouldBe listOf(1, 9)
         maxVersionParts(left = listOf(2, 9), right = listOf(2, 10)) shouldBe listOf(2, 10)
         maxVersionParts(left = listOf(2, 10), right = listOf(2, 9)) shouldBe listOf(2, 10)
+    }
+
+    /**
+     * Only the dotted numbers a version starts with take part in a comparison; a qualifier ends
+     * them, whether a dash or a dot introduces it.
+     */
+    @Test
+    fun `leadingVersionParts stops at the qualifier`() {
+        leadingVersionParts(version = "2.4.21") shouldBe listOf(2, 4, 21)
+        leadingVersionParts(version = "2.4.0-RC2") shouldBe listOf(2, 4, 0)
+        leadingVersionParts(version = "2.4-RC1") shouldBe listOf(2, 4)
+        leadingVersionParts(version = "2") shouldBe listOf(2)
+        leadingVersionParts(version = "release") shouldBe emptyList()
     }
 }
