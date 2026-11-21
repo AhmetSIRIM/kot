@@ -13,6 +13,13 @@ internal fun compareVersionParts(left: List<Int>, right: List<Int>): Int {
         ?: 0
 }
 
+/** The dotted numbers [version] starts with; "2.4.0-RC2" gives [2, 4, 0], a qualifier is dropped. */
+internal fun leadingVersionParts(version: String): List<Int> {
+    return version.takeWhile { character: Char -> character.isDigit() || character == '.' }
+        .split(".")
+        .mapNotNull { part: String -> part.toIntOrNull() }
+}
+
 /**
  * Null-tolerant maximum over version int lists: an absent side loses, two present sides compare
  * component-wise.

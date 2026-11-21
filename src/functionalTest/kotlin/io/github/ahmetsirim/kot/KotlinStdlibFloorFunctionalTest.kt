@@ -79,6 +79,18 @@ class KotlinStdlibFloorFunctionalTest {
         result.output shouldContain "kotlin-stdlib 2.4.21 exceeds the declared Kotlin floor 2.2"
     }
 
+    /** A request for a range names no single version; the version the range resolves to is the one judged. */
+    @Test
+    fun `judges a range request by the version it resolves to`() {
+        publishModule(coordinate = "org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
+        publishModule(coordinate = "fixture:dependency:1.0", dependsOn = "org.jetbrains.kotlin:kotlin-stdlib:[2.0,2.3)")
+        writeProject(dependency = "fixture:dependency:1.0")
+
+        val result: BuildResult = runner().build()
+
+        result.output shouldContain "kotlin-stdlib 2.2.21 <= Kotlin floor 2.2"
+    }
+
     @Test
     fun `says so when the runtime classpath carries no kotlin-stdlib`() {
         publishModule(coordinate = "fixture:dependency:1.0")
@@ -107,19 +119,13 @@ class KotlinStdlibFloorFunctionalTest {
     /**
      * A dependency that does not resolve leaves the graph incomplete: the stdlib it would have
      * brought stays unknown. Calling that "no kotlin-stdlib" would pass a gate that could not
-     * measure, so the run stops and names the dependency. Run without the configuration cache:
-     * with it Gradle refuses the unresolved graph on its own, without it the graph is handed
-     * over with the failure inside.
+     * measure, so the run stops and names the dependency.
      */
     @Test
     fun `fails when a dependency on the runtime classpath does not resolve`() {
         writeProject(dependency = "fixture:missing:1.0", declareRepository = false)
 
-        val result: BuildResult = GradleRunner.create()
-            .withProjectDir(projectDir)
-            .withArguments("verifyConsumerFloor")
-            .withPluginClasspath()
-            .buildAndFail()
+        val result: BuildResult = runner().buildAndFail()
 
         result.output shouldContain "kot: fixture:missing:1.0 on the runtime classpath did not resolve"
     }
@@ -176,7 +182,7 @@ class KotlinStdlibFloorFunctionalTest {
 
         val result: BuildResult = runner().buildAndFail()
 
-        result.output shouldContain "kot: kotlin-stdlib version \"2\" does not start with major.minor."
+        result.output shouldContain "kot: kotlin-stdlib version \"2\" does not start with major.minor"
     }
 
     /** With neither plugin applied no classpath is wired; the stdlib version is given by hand. */
@@ -250,7 +256,10 @@ class KotlinStdlibFloorFunctionalTest {
         )
     }
 
-    /** Writes a jar and a POM for [coordinate] into the test project's Maven repository. */
+    /**
+     * Writes a jar, a POM and the module's version listing for [coordinate] into the test project's
+     * Maven repository.
+     */
     private fun publishModule(coordinate: String, dependsOn: String? = null) {
         val (group: String, name: String, version: String) = coordinate.split(":")
         val directory = File(projectDir, "repository/${group.replace('.', '/')}/$name/$version").apply { mkdirs() }
@@ -268,6 +277,24 @@ class KotlinStdlibFloorFunctionalTest {
             </dependencies>
             """.trimIndent()
         }.orEmpty()
+        // The version listing a range or dynamic request is resolved against.
+        val publishedVersions: List<String> = directory.parentFile.listFiles { file: File -> file.isDirectory }
+            .orEmpty()
+            .map { versionDirectory: File -> versionDirectory.name }
+        File(directory.parentFile, "maven-metadata.xml").writeText(
+            """
+            <metadata>
+              <groupId>$group</groupId>
+              <artifactId>$name</artifactId>
+              <versioning>
+                <versions>
+                  ${publishedVersions.joinToString(separator = "") { "<version>$it</version>" }}
+                </versions>
+              </versioning>
+            </metadata>
+            """.trimIndent()
+        )
+
         File(directory, "$name-$version.pom").writeText(
             """
             <project xmlns="http://maven.apache.org/POM/4.0.0">

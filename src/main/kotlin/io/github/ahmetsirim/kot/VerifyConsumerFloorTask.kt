@@ -68,8 +68,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     /**
      * The kotlin-stdlib version consumers receive with the library, held against
      * [kotlinMetadataFloor]: a consumer's compiler reads the stdlib on its classpath by the same
-     * rule as the library's own classes. The wirings supply the version the project's runtime
-     * classpath resolves to, whatever archive the task reads; a value set here wins. With no
+     * rule as the library's own classes. The wirings supply the highest version on the project's
+     * runtime classpath, selected or asked for, whatever archive the task reads; a value set
+     * here wins. With no
      * value (neither plugin applied, or several release variants) the stdlib is not checked,
      * and the run says so. Not a floor: nothing is declared for it.
      */
@@ -215,7 +216,8 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val stdlibNote: String = if (emittedFloors.kotlinMetadataVersion == null) {
             ""
         } else {
-            "\n\nOnce declared, the Kotlin floor also holds the kotlin-stdlib on the runtime classpath."
+            "\n\nOnce declared, the Kotlin floor is also held against the kotlin-stdlib the library " +
+                "brings, where a runtime classpath is wired."
         }
         val measuredFloorsBlock: String = if (measuredFloorLines.isEmpty()) {
             ""
@@ -295,11 +297,10 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
 
             else -> {
                 // Only major.minor participate, as for the metadata stamp; both have to be there.
-                val stdlibMajorMinor: List<Int> = stdlibVersion.split(".").take(n = 2)
-                    .mapNotNull { part: String -> part.toIntOrNull() }
+                val stdlibMajorMinor: List<Int> = leadingVersionParts(version = stdlibVersion).take(n = 2)
                     .takeIf { parts: List<Int> -> parts.size == 2 }
                     ?: throw GradleException(
-                        "kot: kotlin-stdlib version \"$stdlibVersion\" does not start with major.minor."
+                        "kot: kotlin-stdlib version \"$stdlibVersion\" does not start with major.minor"
                     )
                 val declaredFloorParts: List<Int> = parseKotlinFloor(declaredFloor = declaredFloor)
 

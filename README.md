@@ -21,7 +21,7 @@ behind than that fail with:
 
 ```
 Module was compiled with an incompatible version of Kotlin.
-The binary version of its metadata is 2.3.0, expected version is 2.2.0.
+The binary version of its metadata is 2.3.0, expected version is 2.1.0.
 ```
 
 The producer never sees this error: the same toolchain that stamped the artifact reads it back
@@ -54,9 +54,9 @@ One more value comes from outside the archive and is held against the same Kotli
 `kotlin-stdlib` version on the library's runtime classpath. See
 [What the Kotlin floor means](#what-the-kotlin-floor-means).
 
-In an AAR, classes are read from `classes.jar` and from every jar bundled under `libs/`. The
-classes an archive carries itself are read too, so the two class dimensions also cover a JVM
-library's JAR; see [Plain JARs](#plain-jars).
+In an AAR, classes are read from `classes.jar` and, beside it, from every jar bundled under
+`libs/`. The classes an archive carries itself are read too, so the two class dimensions also
+cover a JVM library's JAR; see [Plain JARs](#plain-jars).
 
 ## Usage
 
@@ -93,18 +93,34 @@ against it. Behavior worth knowing:
   `kotlin-stdlib` version when one is known, to `build/reports/kot/emitted-floors.properties`,
   so the consumer bounds your artifact carries are always one file away.
 - Undeclared floors are skipped, and the skip is named in the output; declaring none at all is
-  an error, because a gate that guards nothing should not run green. That error shows the floors
-  the artifact emits as a `kot { }` block, so a first run with an empty block tells you what to
-  write. They are what the artifact demands today, not a floor anyone chose: lower the Kotlin,
-  compileSdk and JVM floors to what your consumers need and let the gate show what has to
-  change. `agpFloor` is an equality check, so it has to stay equal to your
-  `aarMetadata.minAgpVersion`; a library that declares none gets no `agpFloor` line. A pasted
-  Kotlin floor can still fail on the `kotlin-stdlib` the library brings, which is checked only
-  once that floor is declared.
+  an error, because a gate that guards nothing should not run green. See [First run](#first-run).
 - Every violated dimension is reported in a single failure, so one red build shows the full
   damage of a toolchain bump.
 - The task is configuration-cache compatible.
 - A floor set directly on the task overrides the `kot { }` block.
+
+### First run
+
+Run the task with an empty `kot { }` block and the failure shows the floors the artifact emits,
+as a block to paste:
+
+```
+kot: no consumer floor declared; declare at least one floor in the kot { } block.
+This artifact emits the floors below: what it demands today, not a floor anyone chose. Declare the ones you mean to hold:
+
+kot {
+    kotlinMetadataFloor.set("2.2")
+    compileSdkFloor.set(36)
+    agpFloor.set("8.1.0")
+    jvmTargetFloor.set(17)
+}
+```
+
+Those are a starting point. Lower the Kotlin, compileSdk and JVM floors to what your consumers
+need and let the gate show what has to change. `agpFloor` is an equality check, so it stays
+equal to your `aarMetadata.minAgpVersion`; a library that declares none gets no `agpFloor` line.
+A pasted Kotlin floor can still fail on the `kotlin-stdlib` the library brings, which is checked
+only once that floor is declared.
 
 ### What the Kotlin floor means
 
@@ -115,39 +131,52 @@ consumers use. The rule is the compiler's own; the
 [kotlin-metadata-jvm documentation](https://github.com/JetBrains/kotlin/blob/master/libraries/kotlinx-metadata/jvm/ReadMe.md)
 states it.
 
+### The kotlin-stdlib your library brings
+
 The same floor covers the `kotlin-stdlib` your library brings along. A consumer's build resolves
 to the newest stdlib anything in the dependency graph asks for, and its compiler reads the
 stdlib on its classpath by the same rule: a library whose classes are stamped `2.2` but which
 brings `kotlin-stdlib` 2.4 needs a consumer on Kotlin 2.3. Setting the language version alone
 does not lower that.
 
-kot takes the highest version on your own runtime classpath (the release variant's for an
-Android library, dependencies of dependencies included), whether the classpath selects it or a
-dependency only asks for it, and fails when it is above the floor. A version you force or
-substitute in your own build does not lower it: that setting is not published, and consumers
-still resolve what the dependency asks for.
+kot takes the highest `kotlin-stdlib` version on your own runtime classpath (the release
+variant's for an Android library, dependencies of dependencies included), whether the classpath
+selects it or a dependency only asks for it, and fails when it is above the floor. A
+`kotlin-stdlib` version you force in your own build does not lower it: that setting is not
+published, and consumers still resolve what the dependency asks for.
+
 To see who asks for it, run
 `./gradlew dependencyInsight --dependency kotlin-stdlib --configuration runtimeClasspath`
 (`releaseRuntimeClasspath` for an Android library). To lower it, set `coreLibrariesVersion` in
 the `kotlin { }` block and lower or replace the dependency that asks for more.
 
-That version is a stand-in for what consumers receive, and it is off in known ways:
+That version is a stand-in for what consumers receive. The gate reads the classpath your build
+resolved, so what your build changes about it without publishing the change is not always
+visible. Known gaps, each a green gate over a higher real floor:
 
-- A dependency you exclude leaves no trace on the classpath. If it is still published as a
-  dependency of your library, consumers receive the stdlib it asks for and the gate does not
-  see it.
+- A dependency you exclude leaves no trace. If it is still published as a dependency of your
+  library, consumers receive the stdlib it asks for.
+- A dependency you force or substitute to another version is walked in that version only. The
+  stdlib its published version asks for is not seen.
+- A dependency that asks for a range or a dynamic version of `kotlin-stdlib` names no single
+  version; forced below what consumers resolve, only the forced version counts.
+- A rule that rewrites another module's dependencies (a component metadata rule) is not
+  published either.
+
+And two where the gate is the stricter reader:
+
 - A strict version constraint that you publish lowers the stdlib for consumers too, but the
   gate still counts the higher version a dependency asks for.
 - A stdlib raised only by an `implementation` or `runtimeOnly` dependency reaches a plain JVM
   consumer's runtime classpath but not its compile classpath, so that consumer still compiles.
-  The gate reports it all the same; it is the cautious reading, and the right one for Android
-  consumers, whose compile classpath follows the runtime one.
+  It is the right reading for Android consumers, whose compile classpath follows the runtime
+  one.
 
 The version comes from the project the plugin is applied to, whatever archive the task reads. In
 a project with neither the Android library plugin nor the Java plugin, and in a library with
-several release variants, no classpath is wired: the run says it has no stdlib version to check,
-unless you give one on the task with `kotlinStdlibVersion.set("...")`. With no Kotlin floor
-declared the stdlib is not looked at.
+several release variants, no classpath is wired: the run says it has no stdlib version to check.
+A version given by hand with `kotlinStdlibVersion.set("...")` is checked, but it is a constant
+you typed, not a measurement. With no Kotlin floor declared the stdlib is not looked at.
 
 ### Libraries with product flavors
 

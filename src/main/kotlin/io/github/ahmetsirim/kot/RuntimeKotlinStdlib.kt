@@ -19,23 +19,29 @@ import org.gradle.api.provider.Provider
  * the highest wins. A version the producer forces or substitutes in its own build is not
  * published, so a consumer still resolves the one a dependency asked for.
  *
- * The result is a proxy, and it errs in known directions. An excluded dependency leaves no
- * trace in the graph, so what it would have brought is not seen. A published strict constraint
- * that lowers the stdlib holds for consumers too, yet the higher request still counts here. And
- * a stdlib raised only by a runtime-scoped dependency reaches a plain JVM consumer's runtime
- * classpath but not its compile classpath, where the compiler would read it.
+ * The result is a proxy for what consumers receive. It is read off the graph the producer's
+ * build resolved, so a change that build makes without publishing it can hide a higher version:
+ * an excluded dependency leaves no trace; a dependency forced or substituted to another version
+ * is walked in that version only; a request for a range or a dynamic version names no single
+ * version and does not count; a component metadata rule rewrites what a module asks for.
+ *
+ * It is also the stricter reader in two cases: a published strict constraint lowers the stdlib
+ * for consumers while the higher request still counts here, and a stdlib raised only by a
+ * runtime-scoped dependency reaches a plain JVM consumer's runtime classpath but not its compile
+ * classpath, where the compiler would read it.
  */
 internal object RuntimeKotlinStdlib {
 
     private const val KOTLIN_GROUP = "org.jetbrains.kotlin"
     private const val STDLIB_NAME = "kotlin-stdlib"
 
-    // Dotted numbers with an optional qualifier ("2.4.21", "2.4.0-RC2"); not a range or "2.+".
+    // Dotted numbers with an optional qualifier ("2.4.21", "2.4.0-RC2"). A range, "2.+" and a
+    // lone number do not match; such a request is left to the selected version.
     private val plainVersion = Regex("""\d+(\.\d+)+([-.][A-Za-z0-9]+)*""")
 
     /**
-     * The kotlin-stdlib version [runtimeClasspath] resolves to; a provider with no value when
-     * the graph holds no kotlin-stdlib. The configuration is resolved when the provider is
+     * The highest kotlin-stdlib version on [runtimeClasspath], selected or asked for; a provider
+     * with no value when the graph holds no kotlin-stdlib. The configuration is resolved when the provider is
      * queried, not when it is created. A dependency that does not resolve fails the query: with
      * part of the graph missing, "no kotlin-stdlib" would be a guess.
      */
@@ -84,7 +90,10 @@ internal object RuntimeKotlinStdlib {
         }
 
         return stdlibVersions.maxWithOrNull { left: String, right: String ->
-            compareVersionParts(left = leadingNumbers(version = left), right = leadingNumbers(version = right))
+            compareVersionParts(
+                left = leadingVersionParts(version = left),
+                right = leadingVersionParts(version = right),
+            )
         }
     }
 
@@ -101,12 +110,5 @@ internal object RuntimeKotlinStdlib {
             }
             ?.versionConstraint?.requiredVersion
             ?.takeIf { version: String -> plainVersion.matches(version) }
-    }
-
-    /** The dotted numbers [version] starts with; "2.4.0-RC2" gives [2, 4, 0]. */
-    private fun leadingNumbers(version: String): List<Int> {
-        return version.takeWhile { character: Char -> character.isDigit() || character == '.' }
-            .split(".")
-            .mapNotNull { part: String -> part.toIntOrNull() }
     }
 }

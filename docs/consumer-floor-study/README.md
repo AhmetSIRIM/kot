@@ -107,7 +107,7 @@ with the reason:
 | Status        | Entries | Meaning                                                |
 |---------------|---------|--------------------------------------------------------|
 | `aar`         | 96      | Measured.                                              |
-| `jar`         | 18      | Published as a plain JAR, which kot 0.1.0 does not read. |
+| `jar`         | 18      | A plain JAR, which kot 0.1.0 does not read.            |
 | `excluded`    | 15      | Not a library, or not on a public Maven repository.    |
 | `not_checked` | 15      | Discontinued SDKs; no coordinate was looked up.        |
 | `unverified`  | 4       | No AAR or JAR was found at the coordinate tried.       |
@@ -145,5 +145,5 @@ The counts in this document are sums over `summary.csv`.
 ## Checking a row
 
 Download the URL of a row of `results.csv` and compare the file's SHA-256 with the recorded one.
-Then point kot at the file (the "Without AGP" section of the project README shows how) and
+Then point kot at the file (the "Any other archive" section of the project README shows how) and
 compare the floors it reports.
