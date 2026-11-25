@@ -3,6 +3,7 @@ package io.github.ahmetsirim.kot
 import org.gradle.api.GradleException
 import org.objectweb.asm.ClassReader
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.util.Properties
 import java.util.zip.ZipEntry
@@ -18,8 +19,9 @@ import java.util.zip.ZipInputStream
  * dependency AGP packed in; consumers get those classes like any other. The classes the archive
  * carries itself are always read. The nested jars are read only when a classes.jar entry is
  * present, so jars under libs/ with no classes.jar beside them stay closed; the file name plays
- * no part. aar-metadata.properties (the Android-side floors, written by AGP) is read wherever it
- * is present.
+ * no part. aar-metadata.properties and the AndroidManifest.xml at the archive's root (the
+ * Android-side floors, written by AGP) are read wherever they are present; the manifest as text,
+ * for the minSdkVersion on its uses-sdk element.
  *
  * Classes are inspected with ASM rather than a classloader: loading a class links its
  * supertypes, and an archive's supertypes (Android framework types, dependencies) are not on the
@@ -28,6 +30,7 @@ import java.util.zip.ZipInputStream
 internal object EmittedFloorReader {
 
     private const val AAR_METADATA_ENTRY_NAME = "META-INF/com/android/build/gradle/aar-metadata.properties"
+    private const val MANIFEST_ENTRY_NAME = "AndroidManifest.xml"
     private const val CLASSES_JAR_ENTRY_NAME = "classes.jar"
     private const val BUNDLED_JARS_DIRECTORY = "libs/"
     private const val VERSIONED_CLASSES_DIRECTORY = "META-INF/versions/"
@@ -39,7 +42,7 @@ internal object EmittedFloorReader {
     private const val CLASS_FILE_HEADER_SIZE = 8
 
     /**
-     * Reads the properties entry, then every class of the archive. Nested jars are streamed
+     * Reads the properties entry and the manifest, then every class of the archive. Nested jars are streamed
      * straight out of the outer archive; nothing is extracted to disk. Across classes the
      * highest values win, because a single newer class raises the whole artifact's floor.
      */
@@ -65,6 +68,26 @@ internal object EmittedFloorReader {
                 minCompileSdk = properties.getProperty("minCompileSdk"),
                 minAgpVersion = properties.getProperty("minAndroidGradlePluginVersion"),
                 maxClassMajorVersion = bytecodeScan.maxClassMajorVersion,
+                minSdk = archive.getEntry(MANIFEST_ENTRY_NAME)?.let { manifestEntry: ZipEntry ->
+                    ManifestMinSdk.recordedIn(
+                        manifest = readManifest(archive = archive, manifestEntry = manifestEntry)
+                    )
+                },
+            )
+        }
+    }
+
+    /**
+     * Reads the manifest entry as text. Damaged entry data fails here with the entry's and the
+     * archive's name: the zip layer's own message ("invalid block type") names neither.
+     */
+    private fun readManifest(archive: ZipFile, manifestEntry: ZipEntry): String {
+        return try {
+            archive.getInputStream(manifestEntry).use { stream: InputStream -> stream.readBytes().decodeToString() }
+        } catch (failure: IOException) {
+            throw GradleException(
+                "kot: ${manifestEntry.name} in ${File(archive.name).name} cannot be read (${failure.message})",
+                failure,
             )
         }
     }

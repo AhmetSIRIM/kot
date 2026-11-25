@@ -10,4 +10,5 @@ internal data class EmittedFloors(
     val minCompileSdk: String?, // From aar-metadata.properties, as recorded; the compileSdk every consumer must reach.
     val minAgpVersion: String?, // From aar-metadata.properties; the AGP version every consumer must reach.
     val maxClassMajorVersion: Int?, // Highest class-file major version found across all classes.
+    val minSdk: String?, // From AndroidManifest.xml, as recorded; the minSdk every consumer app must reach.
 )

@@ -45,6 +45,7 @@ internal object AarFixture {
         classMajorVersion: Int = 61,
         minCompileSdk: Int = 36,
         minAgpVersion: String = "8.1.0",
+        minSdk: Int = 23,
     ): File = writeCustom(
         destination = destination,
         classes = listOf(
@@ -58,7 +59,17 @@ internal object AarFixture {
             "minCompileSdk=$minCompileSdk",
             "minAndroidGradlePluginVersion=$minAgpVersion",
         ),
+        manifest = manifestWithMinSdk(minSdkVersion = minSdk.toString()),
     )
+
+    /** A library manifest as AGP writes it into an AAR, with [minSdkVersion] on its uses-sdk element. */
+    fun manifestWithMinSdk(minSdkVersion: String): String =
+        """
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="fixture.library">
+            <uses-sdk android:minSdkVersion="$minSdkVersion" />
+        </manifest>
+        """.trimIndent()
 
     /**
      * The full-control writer for edge cases: any number of classes (order = jar entry order),
@@ -66,7 +77,7 @@ internal object AarFixture {
      * single keys), [includeClassesJar] false omits the nested jar itself. [bundledJars] maps a
      * jar file name to its classes and lands under `libs/`, where AGP packs a library's local
      * jar dependencies. [directClasses] sit in the archive itself, beside the nested jars: a
-     * shape no AGP build emits.
+     * shape no AGP build emits. [manifest] null omits AndroidManifest.xml.
      */
     fun writeCustom(
         destination: File,
@@ -75,6 +86,7 @@ internal object AarFixture {
         includeClassesJar: Boolean = true,
         bundledJars: Map<String, List<FixtureClass>> = emptyMap(),
         directClasses: List<FixtureClass> = emptyList(),
+        manifest: String? = null,
     ): File {
         ZipOutputStream(destination.outputStream()).use { aar: ZipOutputStream ->
             if (includeClassesJar) {
@@ -92,6 +104,12 @@ internal object AarFixture {
             directClasses.forEach { fixtureClass: FixtureClass ->
                 aar.putNextEntry(ZipEntry("${fixtureClass.name}.class"))
                 aar.write(classBytes(fixtureClass = fixtureClass))
+                aar.closeEntry()
+            }
+
+            if (manifest != null) {
+                aar.putNextEntry(ZipEntry("AndroidManifest.xml"))
+                aar.write(manifest.toByteArray())
                 aar.closeEntry()
             }
 

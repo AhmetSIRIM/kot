@@ -47,6 +47,7 @@ kot opens the built archive and verifies what was actually **emitted**, not what
 |---------------------------------|--------------------------------------------|---------------------|
 | Kotlin metadata version         | `@kotlin.Metadata` mv stamp on every class | `<=` declared floor |
 | `minCompileSdk`                 | `aar-metadata.properties`                  | `<=` declared floor |
+| `minSdkVersion`                 | `AndroidManifest.xml` in the AAR           | `<=` declared floor |
 | `minAndroidGradlePluginVersion` | `aar-metadata.properties`                  | `=` declared floor  |
 | Bytecode major version          | class-file header of every class           | `<=` declared floor |
 
@@ -77,6 +78,7 @@ android {
 kot {
     kotlinMetadataFloor.set("2.2")
     compileSdkFloor.set(36)
+    minSdkFloor.set(23)
     agpFloor.set("8.1.0")
     jvmTargetFloor.set(17)
 }
@@ -111,14 +113,16 @@ This artifact emits the floors below: what it demands today, not a floor anyone 
 kot {
     kotlinMetadataFloor.set("2.2")
     compileSdkFloor.set(36)
+    minSdkFloor.set(23)
     agpFloor.set("8.1.0")
     jvmTargetFloor.set(17)
 }
 ```
 
-Those are a starting point. Lower the Kotlin, compileSdk and JVM floors to what your consumers
-need and let the gate show what has to change. `agpFloor` is an equality check, so it stays
-equal to your `aarMetadata.minAgpVersion`; a library that declares none gets no `agpFloor` line.
+Those are a starting point. Lower the Kotlin, compileSdk, minSdk and JVM floors to what your
+consumers need and let the gate show what has to change. `agpFloor` is an equality check, so it
+stays equal to your `aarMetadata.minAgpVersion`; a library that declares none gets no `agpFloor`
+line.
 A pasted Kotlin floor can still fail on the `kotlin-stdlib` the library brings, which is checked
 only once that floor is declared.
 
@@ -228,8 +232,9 @@ counts toward the Kotlin metadata floor. Jars nested inside a plain JAR are not 
 The jars nested in an AAR (`classes.jar` and those under `libs/`) are scanned whole: a module
 descriptor or a versioned class inside one of them does count toward the bytecode floor.
 
-`compileSdkFloor` and `agpFloor` read a file only an AAR carries; declared over a plain JAR they
-fail the build, because a floor that cannot be measured is not a passing one.
+`compileSdkFloor`, `minSdkFloor` and `agpFloor` read files an AGP-built AAR carries; declared
+over a plain JAR they fail the build, because a floor that cannot be measured is not a passing
+one.
 
 ### Any other archive
 

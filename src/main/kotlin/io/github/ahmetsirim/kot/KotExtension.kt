@@ -22,6 +22,12 @@ abstract class KotExtension {
     abstract val compileSdkFloor: Property<Int>
 
     /**
+     * Highest `minSdkVersion` the artifact's manifest may record: the lowest Android API level
+     * a consumer app can have and still merge the library.
+     */
+    abstract val minSdkFloor: Property<Int>
+
+    /**
      * Exact `minAndroidGradlePluginVersion` the artifact must record. Compared for equality,
      * because the recorded value is the module's own `aarMetadata.minAgpVersion` read back: a
      * lower value means the declaration was lost, a higher one means it was raised.
