@@ -23,6 +23,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dependency, and it is written to the report. A `kotlin-stdlib` version the build forces lower
   does not count, because the force is not published. Where no classpath is wired a version
   can be set on the task as `kotlinStdlibVersion`.
+- `minSdkFloor`: the `minSdkVersion` an AAR's manifest records is held against a declared
+  floor, the way `minCompileSdk` is. A consumer app with a lower minSdk cannot merge the
+  library, so a rise narrows who can use it. The value is written to the report and offered in
+  the block shown when no floor is declared.
 
 ### Changed
 

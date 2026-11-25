@@ -32,6 +32,7 @@ class KotPlugin : Plugin<Project> {
             // Conventions, not values: a floor set directly on the task wins over the kot { } block.
             task.kotlinMetadataFloor.convention(extension.kotlinMetadataFloor)
             task.compileSdkFloor.convention(extension.compileSdkFloor)
+            task.minSdkFloor.convention(extension.minSdkFloor)
             task.agpFloor.convention(extension.agpFloor)
             task.jvmTargetFloor.convention(extension.jvmTargetFloor)
             task.emittedFloorsReport.convention(

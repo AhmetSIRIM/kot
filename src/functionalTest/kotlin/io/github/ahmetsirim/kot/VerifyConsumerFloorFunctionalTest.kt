@@ -25,9 +25,9 @@ class VerifyConsumerFloorFunctionalTest {
     lateinit var projectDir: File
 
     /**
-     * The happy path: all four emitted values sit exactly on their declared floors and the gate
+     * The happy path: every emitted value sits exactly on its declared floor and the gate
      * passes, printing one line per asserted dimension. Sitting exactly ON the floor passing is
-     * itself a rule worth pinning: three of the four dimensions compare with <=, not <.
+     * itself a rule worth pinning: the dimensions that are upper bounds compare with <=, not <.
      */
     @Test
     fun `passes when all emitted floors are within the declared floors`() {
@@ -37,6 +37,7 @@ class VerifyConsumerFloorFunctionalTest {
             kot {
                 kotlinMetadataFloor.set("2.2")
                 compileSdkFloor.set(36)
+                minSdkFloor.set(23)
                 agpFloor.set("8.1.0")
                 jvmTargetFloor.set(17)
             }
@@ -47,6 +48,7 @@ class VerifyConsumerFloorFunctionalTest {
 
         result.task(":verifyConsumerFloor")?.outcome shouldBe TaskOutcome.SUCCESS
         result.output shouldContain "consumer floor check passed"
+        result.output shouldContain "minSdk 23 <= floor 23"
         result.output shouldContain "Kotlin metadata 2.2 <= floor 2.2"
     }
 
@@ -72,7 +74,7 @@ class VerifyConsumerFloorFunctionalTest {
 
         result.output shouldContain "consumer floor regression"
         result.output shouldContain "emitted Kotlin metadata version 2.3 exceeds the declared floor 2.2"
-        result.output shouldContain "skipped undeclared floors: compileSdkFloor, agpFloor, jvmTargetFloor"
+        result.output shouldContain "skipped undeclared floors: compileSdkFloor, minSdkFloor, agpFloor, jvmTargetFloor"
     }
 
     /**

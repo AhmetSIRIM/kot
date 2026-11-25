@@ -55,6 +55,11 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     @get:Optional
     abstract val compileSdkFloor: Property<Int>
 
+    /** Task-level counterpart of [KotExtension.minSdkFloor]; a value set here wins over the `kot { }` block. */
+    @get:Input
+    @get:Optional
+    abstract val minSdkFloor: Property<Int>
+
     /** Task-level counterpart of [KotExtension.agpFloor]; a value set here wins over the `kot { }` block. */
     @get:Input
     @get:Optional
@@ -115,7 +120,18 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
         val checkResults: List<FloorCheckResult> = listOfNotNull(
             checkKotlinMetadataFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
             checkKotlinStdlibFloor(),
-            checkCompileSdkFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
+            checkRecordedIntFloor(
+                dimension = RecordedIntDimension.MIN_COMPILE_SDK,
+                declaredFloor = compileSdkFloor,
+                recorded = emittedFloors.minCompileSdk,
+                archiveFileName = archiveFile.name,
+            ),
+            checkRecordedIntFloor(
+                dimension = RecordedIntDimension.MIN_SDK,
+                declaredFloor = minSdkFloor,
+                recorded = emittedFloors.minSdk,
+                archiveFileName = archiveFile.name,
+            ),
             checkAgpFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
             checkJvmTargetFloor(emittedFloors = emittedFloors, archiveFileName = archiveFile.name),
         )
@@ -139,6 +155,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
                 "kotlinMetadataVersion=${parts.joinToString(separator = ".")}"
             },
             emittedFloors.minCompileSdk?.let { value: String -> "minCompileSdk=$value" },
+            emittedFloors.minSdk?.let { value: String -> "minSdk=$value" },
             emittedFloors.minAgpVersion?.let { value: String -> "minAndroidGradlePluginVersion=$value" },
             emittedFloors.maxClassMajorVersion?.let { value: Int -> "maxClassMajorVersion=$value" },
             kotlinStdlibVersion.orNull?.let { value: String -> "kotlinStdlibVersion=$value" },
@@ -195,8 +212,9 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
      * none: that value is the absence of a floor, and offering it would invite pinning it.
      */
     private fun ensureAtLeastOneFloorIsDeclared(emittedFloors: EmittedFloors) {
-        val anyFloorIsDeclared: Boolean = listOf(kotlinMetadataFloor, compileSdkFloor, agpFloor, jvmTargetFloor)
-            .any { floor: Property<*> -> floor.isPresent }
+        val anyFloorIsDeclared: Boolean =
+            listOf(kotlinMetadataFloor, compileSdkFloor, minSdkFloor, agpFloor, jvmTargetFloor)
+                .any { floor: Property<*> -> floor.isPresent }
         if (anyFloorIsDeclared) return
 
         val measuredFloorLines: List<String> = listOfNotNull(
@@ -204,6 +222,7 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
                 "kotlinMetadataFloor.set(\"${parts.take(n = 2).joinToString(separator = ".")}\")"
             },
             emittedFloors.minCompileSdk?.toIntOrNull()?.let { value: Int -> "compileSdkFloor.set($value)" },
+            emittedFloors.minSdk?.toIntOrNull()?.let { value: Int -> "minSdkFloor.set($value)" },
             emittedFloors.minAgpVersion
                 ?.takeIf { value: String -> value != AGP_FLOOR_WHEN_NONE_IS_DECLARED }
                 ?.let { value: String -> "agpFloor.set(\"$value\")" },
@@ -317,32 +336,36 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
     }
 
     /**
-     * Asserts the AAR does not demand a higher compileSdk from consumers than the declared floor.
+     * Holds an int the AAR records against its declared floor: minCompileSdk or minSdkVersion.
      *
      * Background: AGP writes a small properties file (aar-metadata.properties) into every AAR;
      * the consumer's AGP reads it at build time and rejects the library early when the app's
-     * compileSdk is below the recorded minCompileSdk. The emitted value therefore dictates what
-     * every consumer must have. Both sides are single API-level ints, so the comparison is plain.
+     * compileSdk is below the recorded minCompileSdk. The AAR's manifest records minSdkVersion,
+     * and the consumer's manifest merger refuses a library whose minSdk is above the app's. Each
+     * emitted value therefore dictates what every consumer must have, and both sides are single
+     * API-level ints, so the comparison is plain.
      */
-    private fun checkCompileSdkFloor(emittedFloors: EmittedFloors, archiveFileName: String): FloorCheckResult {
-        val declaredFloor: Int = compileSdkFloor.orNull
-            ?: return FloorCheckResult.Skipped(floorName = "compileSdkFloor")
-        val recordedMinCompileSdk: String = emittedFloors.minCompileSdk
-            ?: throw GradleException("kot: minCompileSdk missing from aar-metadata.properties in $archiveFileName")
+    private fun checkRecordedIntFloor(
+        dimension: RecordedIntDimension,
+        declaredFloor: Property<Int>,
+        recorded: String?,
+        archiveFileName: String,
+    ): FloorCheckResult {
+        val floor: Int = declaredFloor.orNull ?: return FloorCheckResult.Skipped(floorName = dimension.floorName)
+        val recordedValue: String = recorded ?: throw GradleException(
+            "kot: ${dimension.recordedName} missing from ${dimension.source} in $archiveFileName"
+        )
         // Judged here, not in the reader: a value this check cannot read must not fail a build
         // that never declared the dimension.
-        val emittedMinCompileSdk: Int = recordedMinCompileSdk.toIntOrNull()
-            ?: throw GradleException(
-                "kot: minCompileSdk in aar-metadata.properties of $archiveFileName " +
-                    "is not a number: \"$recordedMinCompileSdk\""
-            )
+        val emitted: Int = recordedValue.toIntOrNull() ?: throw GradleException(
+            "kot: ${dimension.recordedName} in ${dimension.source} of $archiveFileName " +
+                "is not a number: \"$recordedValue\""
+        )
 
-        return if (emittedMinCompileSdk > declaredFloor) {
-            FloorCheckResult.Violated(
-                line = "minCompileSdk $emittedMinCompileSdk exceeds the declared floor $declaredFloor"
-            )
+        return if (emitted > floor) {
+            FloorCheckResult.Violated(line = "${dimension.label} $emitted exceeds the declared floor $floor")
         } else {
-            FloorCheckResult.Passed(line = "minCompileSdk $emittedMinCompileSdk <= floor $declaredFloor")
+            FloorCheckResult.Passed(line = "${dimension.label} $emitted <= floor $floor")
         }
     }
 
@@ -452,6 +475,31 @@ abstract class VerifyConsumerFloorTask : DefaultTask() {
 
         // What AGP writes as minAndroidGradlePluginVersion for a library that declares none.
         private const val AGP_FLOOR_WHEN_NONE_IS_DECLARED = "1.0.0"
+    }
+
+    /**
+     * An int the AAR records, with the words its check and its messages use: [floorName] is the
+     * property in the kot { } block, [recordedName] the name as [source] spells it (used when
+     * the value is missing or not a number), [label] the name in verdict lines.
+     */
+    private enum class RecordedIntDimension(
+        val floorName: String,
+        val recordedName: String,
+        val label: String,
+        val source: String,
+    ) {
+        MIN_COMPILE_SDK(
+            floorName = "compileSdkFloor",
+            recordedName = "minCompileSdk",
+            label = "minCompileSdk",
+            source = "aar-metadata.properties",
+        ),
+        MIN_SDK(
+            floorName = "minSdkFloor",
+            recordedName = "minSdkVersion",
+            label = "minSdk",
+            source = "AndroidManifest.xml",
+        ),
     }
 
     /** One dimension's verdict; the three cases drive the three sections of [reportAndGate]. */

@@ -37,11 +37,11 @@ class AgpWiringFunctionalTest {
     /**
      * The full consumer story in one test: apply the plugin next to com.android.library, declare
      * floors in kot { }, run verifyConsumerFloor. The release AAR gets built, opened and checked
-     * across all four dimensions; the aar-metadata values declared in the android { } block come
-     * back out of the artifact and must round-trip exactly.
+     * across every dimension; the aar-metadata values and the minSdk declared in the android { }
+     * block come back out of the artifact and must round-trip exactly.
      */
     @Test
-    fun `wires the release AAR automatically and verifies all four floors against it`() {
+    fun `wires the release AAR automatically and verifies every floor against it`() {
         writeAndroidLibraryProject()
 
         val result: BuildResult = GradleRunner.create()
@@ -55,6 +55,7 @@ class AgpWiringFunctionalTest {
         // The stdlib AGP's built-in Kotlin puts on the release runtime classpath.
         result.output shouldContain Regex("""kotlin-stdlib 2\.2\.\d+ <= Kotlin floor 2\.2""")
         result.output shouldContain "minAndroidGradlePluginVersion = 8.1.0" // Round-trips from aarMetadata below.
+        result.output shouldContain "minSdk 24 <= floor 24" // Read back out of the manifest AGP packed.
     }
 
     /**
@@ -286,6 +287,7 @@ class AgpWiringFunctionalTest {
             configure<KotExtension> {
                 kotlinMetadataFloor.set("2.2")
                 compileSdkFloor.set(29)
+                minSdkFloor.set(24)
                 agpFloor.set("8.1.0")
                 jvmTargetFloor.set(17)
                 $extraKotConfiguration
